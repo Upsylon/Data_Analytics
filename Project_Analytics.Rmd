@@ -1,0 +1,7 @@
+---
+title: "Project_Data_Anlytics"
+author: "Bron_Luca, Grandadam_Patrik"
+date: "26 10 2018"
+output: html_document
+---
+
