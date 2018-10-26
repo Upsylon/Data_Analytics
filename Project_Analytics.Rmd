@@ -5,3 +5,28 @@ date: "26 10 2018"
 output: html_document
 ---
 
+```{r}
+cred <- read.csv2("GermanCredit.csv")
+cred <- data.frame(cred)
+```
+
+
+```{r}
+nrows<-nrow(cred)
+n.missing<-rowSums(is.na(cred))
+sum(n.missing)
+```
+As the sum of the missing values is equal to 0, we can deduce that we have no missing value in the GermanCredit file.
+
+```{r}
+table(cred$HISTORY)
+```
+
+```{r}
+
+for(i in 1:32){print(table(cred[,i]))}
+```
+
+
+
+
