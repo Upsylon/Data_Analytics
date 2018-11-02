@@ -16,16 +16,46 @@ nrows<-nrow(cred)
 n.missing<-rowSums(is.na(cred))
 sum(n.missing)
 ```
-As the sum of the missing values is equal to 0, we can deduce that we have no missing value in the GermanCredit file.
+
+We then have to be sure that we have no wrong recorded data (for instance, a duration of 1 Billion). To be sure that we have no outlier that results from a human error, we can inspect each variable with a summary to see if everything seems correct.
+As an example, we can appreciate the summary of the variable *"HISTORY"*.
 
 ```{r}
-table(cred$HISTORY)
+summary(cred$HISTORY)
 ```
 
-```{r}
+However, doing this for all variables can be long and boring. It can be better to represent these number visually with a boxplot. With this representation, we can see at a glance if some values might be "dirty".
 
-for(i in 1:32){print(table(cred[,i]))}
+
+
+```{r, fig.height=3, fig.width=3, warning=FALSE}
+
+for (i in 1:32){
+  if(range(cred[,i]<=5)){
+    barplot(table(cred[,i]), main=colnames(cred[i]), xlab="")
+    } else
+    {boxplot(cred[,i], main=colnames(cred[i]))}
+  }
 ```
+
+```{r, fig.height=3, fig.width=3, warning=FALSE}
+for (i in 1:32){
+  if(range(cred[,i]<10)){
+    print(summary(cred[,i]))
+    } else
+    {boxplot(cred[,i], main=colnames(cred[i]))}
+  }
+```
+
+
+Pb with education ; guarantor
+
+
+
+
+
+
+
 
 
 
