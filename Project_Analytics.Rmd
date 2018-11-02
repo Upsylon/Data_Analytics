@@ -1,56 +1,113 @@
 ---
 title: "Project_Data_Anlytics"
 author: "Bron_Luca, Grandadam_Patrik"
-date: "26 10 2018"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
-```{r}
+```{r, message=FALSE}
 cred <- read.csv2("GermanCredit.csv")
 cred <- data.frame(cred)
+attach(cred)
+```
+
+
+```{r, message=FALSE}
+library(dplyr)
+library(magrittr)
+library(kableExtra)
+library(ggplot2)
+library(stringr)
 ```
 
 
 ```{r}
-nrows<-nrow(cred)
-n.missing<-rowSums(is.na(cred))
-sum(n.missing)
+my_theme <- function(base_size = 10, base_family = "sans"){
+  theme_minimal(base_size = base_size, base_family = base_family) +
+    theme(
+      axis.text = element_text(size = 10),
+      axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 0.5),
+      axis.title = element_text(size = 12),
+      panel.grid.major = element_line(color = "grey"),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "aliceblue"),
+      strip.background = element_rect(fill = "lightgrey", color = "grey", size = 1),
+      strip.text = element_text(face = "bold", size = 10, color = "black"),
+      legend.position = "bottom",
+      legend.justification = "top", 
+      legend.box = "horizontal",
+      legend.box.background = element_rect(colour = "grey50"),
+      legend.background = element_blank(),
+      panel.border = element_rect(color = "grey", fill = NA, size = 0.5)
+    )
+}
+```
+
+```{r}
+names(cred) <- tolower(names(cred))
+```
+
+
+```{r}
+nrows <- nrow(cred)
+n.missing <- rowSums(is.na(cred))
+sum(n.missing) 
 ```
 
 We then have to be sure that we have no wrong recorded data (for instance, a duration of 1 Billion). To be sure that we have no outlier that results from a human error, we can inspect each variable with a summary to see if everything seems correct.
-As an example, we can appreciate the summary of the variable *"HISTORY"*.
+As an example, we can appreciate the summary of the variable *history*.
 
 ```{r}
-summary(cred$HISTORY)
+summary(cred$history) 
 ```
 
 However, doing this for all variables can be long and boring. It can be better to represent these number visually with a boxplot. With this representation, we can see at a glance if some values might be "dirty".
 
 
-
 ```{r, fig.height=3, fig.width=3, warning=FALSE}
 
-for (i in 1:32){
-  if(range(cred[,i]<=5)){
-    barplot(table(cred[,i]), main=colnames(cred[i]), xlab="")
-    } else
-    {boxplot(cred[,i], main=colnames(cred[i]))}
+for (i in 2:length(cred)) {
+  if (range(cred[, i] <= 5)) {
+  print(
+  ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
+  ggtitle(str_c("Barplot of ", paste(colnames(cred[i])))) +
+  scale_x_continuous(breaks = seq(3, 8, 1)) +
+  ggtitle(str_c("The barplot of\n ", paste(colnames(cred[i])))) +
+  xlab(colnames(cred[i])) + 
+  ylab("Total") +
+  theme(plot.title = element_text(hjust = 0.5))
+  )
+  }else
+  {
+  print(ggplot(cred, aes(y = cred[, i])) + geom_boxplot() +
+  ylab(colnames(cred[i])) +
+  ggtitle(str_c("The boxplot of\n ", paste(colnames(cred[i])))) +
+  theme(plot.title = element_text(hjust = 0.5)))
   }
+}
+
 ```
 
-```{r, fig.height=3, fig.width=3, warning=FALSE}
-for (i in 1:32){
-  if(range(cred[,i]<10)){
-    print(summary(cred[,i]))
-    } else
-    {boxplot(cred[,i], main=colnames(cred[i]))}
-  }
+
+As we can see on our graphs, some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
+In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
+We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
+
+Let's first look at our variable *age*. We assume that, generally, a person will never live more than a hundred year, and will never contract a credit at such ages. This is why the data with $Age > 100$ are definitely wrong recorded. We will therefore have to replace them in our database.  
+First, we have to find how much data are potentially dirty according to our assumptions and to localisate them in order to replace them.  
+
+```{r}
+attach(cred)
+table(age>=100) # number of instances with age>=100
+which(age>75) 
 ```
 
+According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>75) `.   
 
-Pb with education ; guarantor
 
+```{r}
 
+```
 
 
 
