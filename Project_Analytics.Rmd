@@ -5,14 +5,19 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
-```{r, message=FALSE}
+```{r include = FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+```
+
+
+```{r, message=FALSE, echo=FALSE}
 cred <- read.csv2("GermanCredit.csv")
 cred <- data.frame(cred)
 attach(cred)
 ```
 
 
-```{r, message=FALSE}
+```{r, message=FALSE, echo=FALSE}
 library(dplyr)
 library(magrittr)
 library(kableExtra)
@@ -21,13 +26,14 @@ library(stringr)
 ```
 
 
-```{r}
+```{r, echo=FALSE}
 my_theme <- function(base_size = 10, base_family = "sans"){
   theme_minimal(base_size = base_size, base_family = base_family) +
     theme(
       axis.text = element_text(size = 10),
-      axis.text.x = element_text(angle = 45, vjust = 0.5, hjust = 0.5),
+      axis.text.x = element_text(vjust = 0.5, hjust = 0.5),
       axis.title = element_text(size = 12),
+      plot.title = element_text(hjust = 0.5),
       panel.grid.major = element_line(color = "grey"),
       panel.grid.minor = element_blank(),
       panel.background = element_rect(fill = "aliceblue"),
@@ -44,52 +50,97 @@ my_theme <- function(base_size = 10, base_family = "sans"){
 ```
 
 ```{r}
-names(cred) <- tolower(names(cred))
+names(cred) <- tolower(names(cred)) # changing the name of the variable into lowercase
 ```
 
+
+```{r, results='hide'}
+sum(is.na(cred)) # checking if we have missing data
+```
+
+# Introduction
+
+## Exploratory analysis
+
+### Explanatory variables
+
+Before beginning any kind of analysis, we have to understand the data we are working with. 
 
 ```{r}
-nrows <- nrow(cred)
-n.missing <- rowSums(is.na(cred))
-sum(n.missing) 
+data.frame(variable = names(cred),
+           classe = sapply(cred, typeof),
+           first_values = sapply(cred, function(x) paste0(head(x),  collapse = ", ")),
+           row.names = NULL) %>% 
+  kable(caption="Overview of our data") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  column_spec(1, width = "10em", border_right = T) %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "18em") %>%
+  scroll_box(width = "70%", height = "200px")
+  
 ```
 
-We then have to be sure that we have no wrong recorded data (for instance, a duration of 1 Billion). To be sure that we have no outlier that results from a human error, we can inspect each variable with a summary to see if everything seems correct.
-As an example, we can appreciate the summary of the variable *history*.
+
+&nbsp;
+
+As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary of categorical, while only few are numerical.  
+
+More than seeing the first values of our variables and their types, we also need to understand how distributed they are.  
+As an example, we can appreciate the summary of the variable *history* and a frequency table:
 
 ```{r}
-summary(cred$history) 
-```
-
-However, doing this for all variables can be long and boring. It can be better to represent these number visually with a boxplot. With this representation, we can see at a glance if some values might be "dirty".
-
-
-```{r, fig.height=3, fig.width=3, warning=FALSE}
-
-for (i in 2:length(cred)) {
-  if (range(cred[, i] <= 5)) {
-  print(
-  ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
-  ggtitle(str_c("Barplot of ", paste(colnames(cred[i])))) +
-  scale_x_continuous(breaks = seq(3, 8, 1)) +
-  ggtitle(str_c("The barplot of\n ", paste(colnames(cred[i])))) +
-  xlab(colnames(cred[i])) + 
-  ylab("Total") +
-  theme(plot.title = element_text(hjust = 0.5))
+c(summary(cred$history)) %>% as.data.frame %>%
+  kable(caption = "Summary of variable history", align = "l", col.names = c("Value")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "float_left"
   )
-  }else
+
+table(cred$history) %>% kable(caption = "Frequency table of history",
+                              col.names = c("Values", "Frequency")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F
+  )
+```
+&nbsp;  
+
+However, doing this for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
+
+```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
+
+for (i in 2:(length(cred)-1)) {
+  if (range(cred[, i] < 5)) {
+    print(
+      ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
+        ggtitle(str_c("Barplot of\n", paste(
+          colnames(cred[i])
+        ))) +
+        xlab(colnames(cred[i])) +
+        ylab("Total") +
+        my_theme()
+    )
+  } else
   {
-  print(ggplot(cred, aes(y = cred[, i])) + geom_boxplot() +
-  ylab(colnames(cred[i])) +
-  ggtitle(str_c("The boxplot of\n ", paste(colnames(cred[i])))) +
-  theme(plot.title = element_text(hjust = 0.5)))
+    print(
+      ggplot(cred, aes(y = cred[, i])) + geom_boxplot() + 
+        ylab(colnames(cred[i])) +
+      ggtitle(str_c("Boxplot of\n ", paste(
+        colnames(cred[i])
+      ))) +
+        my_theme() +
+        theme(
+        axis.text.x=element_blank())
+    )
   }
 }
 
 ```
 
+Thanks to these graphs, we can better understand our data at a glance and will be able to refer to them when needed.  
 
-As we can see on our graphs, some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
+In addition, these graphs enable un too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
 In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
@@ -98,22 +149,185 @@ First, we have to find how much data are potentially dirty according to our assu
 
 ```{r}
 attach(cred)
-table(age>=100) # number of instances with age>=100
-which(age>75) 
 ```
-
-According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>75) `.   
 
 
 ```{r}
+table(age>=100) %>% kable(caption="Number of instances with age > 100") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F, position = "float_left") %>%
+  column_spec(1, width = "5em", border_right = T) %>%
+  column_spec(2, width = "5em")
+which(age>100) %>% kable(caption="Position of instance with age > 100") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F, position = "left") %>%
+  column_spec(1, width = "9.5em") 
+```
 
+&nbsp;  
+&nbsp;  
+
+
+According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
+
+We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$.  
+However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values.  
+
+```{r, fig.height=4, fig.width=4, message=FALSE, warning=FALSE}
+ggplot(cred, aes(x = cred$age)) + 
+  geom_bar(stat = "count", position = "dodge") +
+  ggtitle(str_c("Barplot of age without the erroneous data")) +
+  xlab("Age") +
+  ylab("Frequency") +
+  xlim(c(min(age),max(age[age!=max(cred$age)]))) +
+  my_theme()
+```
+
+It could therefore be possible to replace it at random with different probabilities according to the size of each class.  
+We prefer to opt for the median (equal to `r median(age[age!=max(age)])`) to replace our problematic value as it offers more convenience.  
+Note that for calculating the median, our problematic value should not be used.  
+
+```{r}
+cred$age[which(age>75)] <- median(age[age!=max(age)])
+```
+
+An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to eachother ($mean = `r mean(age)`$ while $median = `r median(age)`$).  
+
+
+Next, we also have to deal with our two categorical data that have been wrong recorded:  
+    - one in *education*  
+    - one in *guarantor*
+
+They also have to be cleaned. 
+
+The following is again the barplot of *education*. 
+
+```{r, fig.height=4, fig.width=4}
+ggplot(cred, aes(x = cred$education)) +
+  geom_bar(stat = "count", position = "dodge") +
+  ggtitle(str_c("Barplot of education")) +
+  xlab("Education") +
+  ylab("Count") +
+  my_theme()
+```
+
+Here, the likelihood that this wrong recorded data is equal to $0$ is clearly higher. Therefore, each of the previously presented methods (using the mean, using the median and even assigning it to a class at random) would with a high probability result in assigning this instance and assign it the value $Education = 0$.  
+We can confirm these first assumption with a frequency table:  
+
+```{r}
+edu <- rbind(table(education), paste(round(prop.table(table(education)) * 100, 1), "%"))
+rownames(edu) <- c("sample size", "proportion")
+edu %>% kable(caption = "Frequency table of education", align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  column_spec(1, border_right = T)
 ```
 
 
+&nbsp;
+
+It is indeed more appropriate to replace our value by 0 as the probability of belonging to this class is close to 20 times bigger.  
+
+```{r}
+cred$education[which(education==-1)] <- 0
+```
 
 
+Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
+
+```{r}
+gua <- rbind(table(guarantor), paste(round(prop.table(table(guarantor)) * 100, 1), "%"))
+rownames(gua) <- c("sample size", "proportion")
+gua %>% kable(caption = "Frequency table of guarantor", align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F, position = "float_left") %>%
+  column_spec(1, border_right = T) %>%
+  column_spec(2, width="5em") %>%
+  column_spec(3, width="5em") 
+```
 
 
+```{r, fig.height=3, fig.width=3}
+ggplot(cred, aes(x = cred$guarantor)) +
+  geom_bar(stat = "count", position = "dodge") +
+  ggtitle(str_c("Barplot of guarantor")) +
+  xlab("Guarantor") +
+  ylab("Count") +
+  scale_x_continuous(breaks = c(0, 1, 2)) +
+  my_theme()
+```
 
+Again, for the same reasons, it is preferable to replace the wrong recorded data by 0.  
+
+```{r}
+cred$guarantor[which(guarantor==2)] <- 0
+```
+
+In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
+ 
+```{r}
+cred$present_resident <- cred$present_resident - 1
+```
+ 
+ 
+**Variable num_credits: y'a pas de 0, pas cohérent...**
+ 
+These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.
+ 
+### Response variable
+
+As our final goal is to predict if a customer should be classified as a risky one or not, we have to have a particular look at our response variable that establishes if an applicant presents a good or a bad risk.  
+
+```{r}
+ggplot(cred, aes(x = cred$response)) + geom_bar(stat = "count", position = "dodge") +
+  ggtitle(str_c("Barplot of the response variable")) +
+  xlab("Response variable") +
+  ylab("Total") +
+  scale_x_continuous(breaks = c(0,1)) +
+  my_theme()
+```
+
+```{r}
+res <- rbind(table(response), paste(round(prop.table(table(response)) * 100, 1), "%"))
+rownames(res) <- c("sample size", "proportion")
+res %>% kable(caption = "Frequency table of our response variable", align = 'c') %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F) %>%
+  column_spec(1, border_right = T) %>%
+  column_spec(2, width="5em") %>%
+  column_spec(3, width="5em") 
+```
+
+As we can see, if a random customer steps in the bank, the *a priori* probability that he will present a good ranking will be of 70%.  
+Without any calculations, the bank has more chances to make a good decision when octroying a credit.  
+However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model that will have an accuracy much better than these initial 70% that are obtained using a naive method of always octroying a credit.  
+Better, our model should 
+
+We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the expanatory variables and the response variable.
+
+### Interactions between the explanatory variables and the response variable
+
+
+Text... 
+ 
+```{r, fig.width=3, fig.height=3, cache=TRUE }
+
+for(i in 2:(length(cred) - 1)) {
+  print(
+    ggplot(cred, aes(
+      x = response, y = cred[, i] ,  group = response
+    )) +
+      geom_boxplot() +
+      xlab("Response variable") +
+      ylab(colnames(cred[i])) +
+      ggtitle(str_c(
+        "Interaction between\n ",
+        paste(colnames(cred[i]), "and the\n response variable")
+      )) +
+      scale_x_continuous(breaks=c(0,1)) +
+      my_theme()
+  )
+}
+
+```
 
 

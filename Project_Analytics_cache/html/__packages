@@ -1,0 +1,6 @@
+base
+dplyr
+magrittr
+kableExtra
+ggplot2
+stringr
