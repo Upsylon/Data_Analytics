@@ -4,3 +4,8 @@ magrittr
 kableExtra
 ggplot2
 stringr
+rpart
+rpart.plot
+knitr
+cluster
+maptree

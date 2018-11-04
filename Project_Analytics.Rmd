@@ -5,6 +5,21 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
+ - [Introduction](#Intro)
+ - [Exploratory analysis](#Exp)
+ - [Modelling](#Mod)
+    - [CART](#CART)
+    - [Logistic Regression](#Logit)
+    - [....]()
+    - [....]()
+    - [....]()
+ - [Cross Validation Approach](#CV)
+ - [...](#)
+ - [...](#)
+
+**LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
+
+
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo=FALSE)
 ```
@@ -20,9 +35,15 @@ attach(cred)
 ```{r, message=FALSE, echo=FALSE}
 library(dplyr)
 library(magrittr)
+library(knitr)
 library(kableExtra)
 library(ggplot2)
 library(stringr)
+library(rpart)
+library(rpart.plot)
+library(maptree)
+library(caret)
+library(gmodels)
 ```
 
 
@@ -58,9 +79,22 @@ names(cred) <- tolower(names(cred)) # changing the name of the variable into low
 sum(is.na(cred)) # checking if we have missing data
 ```
 
-# Introduction
+# Introduction {#Intro}
 
-## Exploratory analysis
+Parler de:
+- méthode utilisée
+- grandes étapes
+- classification task (goal) =/= prediction
+- [à compléter...]
+
+--> Exploration des données = 1st insight
+--> Modelling: train/set set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
+--> Cross validation avec les meilleurs de chq models pour selectionner le grand gagnant...
+
+--> Description des variables (comme ca c'est plus simple de s'en sortir?!)
+
+
+## Exploratory analysis 
 
 ### Explanatory variables
 
@@ -110,31 +144,31 @@ However, doing this for all variables can be long and boring. It can be better t
 
 ```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
 
-for (i in 2:(length(cred)-1)) {
-  if (range(cred[, i] < 5)) {
-    print(
-      ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
-        ggtitle(str_c("Barplot of\n", paste(
-          colnames(cred[i])
-        ))) +
-        xlab(colnames(cred[i])) +
-        ylab("Total") +
-        my_theme()
-    )
-  } else
-  {
-    print(
-      ggplot(cred, aes(y = cred[, i])) + geom_boxplot() + 
-        ylab(colnames(cred[i])) +
-      ggtitle(str_c("Boxplot of\n ", paste(
-        colnames(cred[i])
-      ))) +
-        my_theme() +
-        theme(
-        axis.text.x=element_blank())
-    )
-  }
-}
+# for (i in 2:(length(cred)-1)) {
+#   if (range(cred[, i] < 5)) {
+#     print(
+#       ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
+#         ggtitle(str_c("Barplot of\n", paste(
+#           colnames(cred[i])
+#         ))) +
+#         xlab(colnames(cred[i])) +
+#         ylab("Total") +
+#         my_theme()
+#     )
+#   } else
+#   {
+#     print(
+#       ggplot(cred, aes(y = cred[, i])) + geom_boxplot() + 
+#         ylab(colnames(cred[i])) +
+#       ggtitle(str_c("Boxplot of\n ", paste(
+#         colnames(cred[i])
+#       ))) +
+#         my_theme() +
+#         theme(
+#         axis.text.x=element_blank())
+#     )
+#   }
+# }
 
 ```
 
@@ -311,23 +345,339 @@ Text...
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE }
 
-for(i in 2:(length(cred) - 1)) {
-  print(
-    ggplot(cred, aes(
-      x = response, y = cred[, i] ,  group = response
-    )) +
-      geom_boxplot() +
-      xlab("Response variable") +
-      ylab(colnames(cred[i])) +
-      ggtitle(str_c(
-        "Interaction between\n ",
-        paste(colnames(cred[i]), "and the\n response variable")
-      )) +
-      scale_x_continuous(breaks=c(0,1)) +
-      my_theme()
-  )
-}
+# for(i in 2:(length(cred) - 1)) {
+#   print(
+#     ggplot(cred, aes(
+#       x = response, y = cred[, i] ,  group = response
+#     )) +
+#       geom_boxplot() +
+#       xlab("Response variable") +
+#       ylab(colnames(cred[i])) +
+#       ggtitle(str_c(
+#         "Interaction between\n ",
+#         paste(colnames(cred[i]), "and the\n response variable")
+#       )) +
+#       scale_x_continuous(breaks=c(0,1)) +
+#       my_theme()
+#   )
+# }
 
+```
+
+--> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
+
+
+
+
+
+
+
+
+
+
+# Modelling {#Mod}
+
+Creation de test et train set:
+
+```{r}
+set.seed(111)
+index.train <- sample(1:nrow(cred), size=nrow(cred)*0.75, replace=FALSE)
+cred.train <- cred[index.train,]
+cred.test <- cred[-index.train,]
+```
+
+
+
+
+
+## CART {#CART}
+
+** Petite description de CART, ...**
+
+### Building the model
+
+
+```{r}
+cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
+```
+
+
+```{r}
+rpart.plot(cart.model, main="Original decision tree")
+```
+
+```{r}
+cart.model$cptable %>% 
+  kable(caption = "CP table of the CART model") %>% 
+  kable_styling(
+  bootstrap_options = c("striped", "hover", "condensed"),
+  full_width = F, 
+  position = "float_left"
+)
+head(cart.model$variable.importance, n = 6) %>%
+  kable(caption = "Variable importance table first 6 instances") %>% 
+  kable_styling(
+  bootstrap_options = c("striped", "hover", "condensed"),
+  full_width = F
+) %>%
+  column_spec(1, width = "10em") %>%
+  column_spec(2, width = "10em")
+
+plotcp(cart.model)
+```
+
+--> Bon model mais bcp trop complexe... On doit pruner. Idee: on veut un arbre plus simple sans perdre en qualité prédictive (on peut pas dire statistiquement que 1 est meilleur que l'autre etc.)
+--> Parler des variables les plus importantes
+
+### Optimizing the model: Pruning
+
+1 - SE rule... 
+--> Parler de l'idée générale: simplifier le modele sans perdre en qualité
+--> Dire comment ca marche
+
+```{r}
+min.xstd <- cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable)] # xstd associated with lowest xerror
+min.xerror <- cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable) - 1] # lowest xerror
+sum.xe.xstd <- min.xstd + min.xerror # sum of both
+cp.pruned <- cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),1]+10^-10 # CP value to which to prune the tree ; min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd)) representing the row to be pruned at
+```
+
+Pruning the tree at CP = `r cp.pruned`. According to our previous table, this represents `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits to be kept, equivalent to a tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  `.
+
+```{r}
+cart.pruned <- prune(cart.model, cp=cp.pruned)
+cart.pruned$cptable %>% 
+  kable(caption = "CP table of the CART model") %>% 
+  kable_styling(
+  bootstrap_options = c("striped", "hover", "condensed"),
+  full_width = F, 
+  position = "float_left"
+)
+rpart.plot(cart.pruned, main="Pruned decision tree")
+```
+
+
+### Predicting the values of the testing set
+
+```{r}
+pred.cart <- predict(cart.pruned, newdata=cred.test, type="class")
+cart.tab <- table(Predictions=pred.cart, Observations=cred.test$response) # confusion matrix. 
+cart.tab %>% kable(caption="Confusion matrix for the CART model", col.names = c("Predict 0", "Predict 1")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "l") %>%
+  column_spec(1, border_right = T, width="5em") %>%
+  column_spec(2, width="6em") %>%
+  column_spec(3, width="6em") 
+
+# sum(diag(cart.tab))/sum(cart.tab) # accuracy
+
+```
+
+Accuracy of the pruned CART model on the test set: `r sum(diag(cart.tab))/sum(cart.tab)`.
+
+More details: 
+
+
+```{r comment=NA}
+CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
+```
+
+--> 18 sur 56 sont mal prédit parmis les 0 (grosse perte --> non remboursement ou remboursement partiel si on leur prete) et 47 sur 194 sont mal prédits par parmis le 1 (petite perte --> on perd juste les intérets si on décide de pas prêter). 
+
+
+
+--> Parler de accuracy en elle meme (0.74 pas top par rapport aux 0.7 de base si on prédit que "good")
+--> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
+--> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE
+
+
+
+
+
+
+
+
+## Logistic regression {#Logit}
+
+--> Parler de pourquoi Logistic regression (fait un bon taf quand outcome binaire)
+
+
+
+### Building the model
+
+```{r comment=NA}
+logit.model <- glm(response ~., data=cred.train, family="binomial")
+summary(logit.model)
+```
+
+--> Parler du fait qu'on a des similitudes avec CART (les variables importantes avant ont aussi des coeffs signi ici... ** pas toutes... ** --> nuancer...).
+--> Parler du fait qu'on a aussi plein de variables inutiles et qu'on va faire une stepwise pour minimiser AIC 
+--> Dire l'idée de AIC (arbritrage entre perf du model et complexité)
+--> Expliquer comment ca marche
+
+### Optimizing the model: Stepwise selection according to AIC criteria
+
+
+```{r, results='hide', echo=TRUE}
+logit.step <- step(logit.model, direction="both")
+summary(logit.step)
+```
+
+
+--> Parler du fait qu'on a quand meme encore énormément de variables mais que le AIC est minimisé
+--> Parler du fait qu'on pourrait en virer manuellement (mais long et chiant)
+
+### Predicting the values of the testing set
+
+
+```{r}
+pred.logit.step <- ifelse(
+  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.5, 1, 0
+  ) # the predictions of the class
+pred.logit.step.prob <- predict(logit.step, newdata=cred[-index.train,], type="response")
+
+cbind(pred.logit.step.prob,cred.test$response) %>% as.data.frame %>% 
+  ggplot(aes(x=V2, y = pred.logit.step.prob, group=V2)) + geom_boxplot() +
+        my_theme() +
+  ggtitle("Predicted probabilities against real values") +
+  xlab("Values of the testing set") +
+  ylab("Predicted probabilities of the logistic regression") +
+  scale_x_continuous(breaks = c(0,1))
+```
+
+```{r}
+glm.tab <-
+  table( Observations = cred.test$response, Predictions = pred.logit.step) # confusion matrix.
+glm.tab %>% kable(caption = "Confusion matrix for the Logistic regression model",
+                  col.names = c("Predict 0", "Predict 1")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+
+# sum(diag(glm.tab))/sum(glm.tab) # accuracy
+```
+
+```{r comment=NA}
+CrossTable(x = cred.test$response, y = pred.logit.step, prop.chisq = FALSE)
+```
+
+FALSE POSITIVE: 47 sur les 250 sont prédits 1 alors qu'ils sont 0... C'est la merde
+Idée: on peut changer la proba limite pour dire que c'est "bon" pour avoir moins de FALSE POSITIVE...
+Ca va baisser l'accuracy, mais ca va potentiellement nous faire perdre moins d'argent (on va refuser plus souvent les crédits à risques, et aussi les crédits sans risques...)
+
+
+```{r}
+pred.logit_0.7 <- ifelse(
+  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.75, 1, 0
+  ) # the predictions of the class
+```
+
+```{r}
+glm.tab <-
+  table(Observations = cred.test$response, Predictions = pred.logit_0.7) # confusion matrix.
+glm.tab %>% kable(caption = "Confusion matrix for the adapted Logistic regression model",
+                  col.names = c("Predict 0", "Predict 1")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+
+sum(diag(glm.tab))/sum(glm.tab) # accuracy
+```
+
+--> En passant la limite à 0.75, on a gardé une bonne accuracy, et on fait moins d'erreurs d'évaluation parmis les "risky". Faut voir se que la banque peut se permettre comme marge et si les risky conduisent forcément à des pertes...
+
+
+## Neural Network 
+
+### Building the model
+
+### Optimizing the model: selecting the number of nodes and layers
+
+### Predicting the values of the testing set
+
+
+
+
+
+## Support Vector Machine (SVM)
+
+### Building the model
+
+### Optimizing the model: selecting the number of nodes and layers
+
+### Predicting the values of the testing set
+
+
+## Model x (K-nn)
+
+### Building the model
+
+### Optimizing the model: selecting the number of nodes and layers
+
+### Predicting the values of the testing set
+
+Apres y'en a marre...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Cross Validation approach {#CV}
+
+Creation of 10 different sets in order to do the Cross-Validation.
+The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.
+
+```{r}
+test.list <- list() # creates an empty list that will be the test sets
+train.list <- list() # creates an empty list that will be the train sets
+counter <- 0
+
+# Creates the 10 sets of size 300
+for (i in 1:10){
+  index <- counter + c(1:300) # the row numbers that will be in the test set
+  test.list[[i]] <- cred[index, ] # the test set number i
+  train.list[[i]] <- cred[-index, ] # the train set number i
+  counter <- counter + 300
+}
+```
+
+For example, *test.list[[1]]* is a data set of 300 rows taken at random from our data.
+
+```{r} 
+# test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>% 
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+#   scroll_box(width = "100%", height = "200px")
+# 
+# 
+# train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>% 
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+#   scroll_box(width = "100%", height = "200px")
 ```
 
 
