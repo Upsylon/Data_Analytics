@@ -39,11 +39,17 @@ library(knitr)
 library(kableExtra)
 library(ggplot2)
 library(stringr)
+library(DataExplorer)
+library(corrr)
 library(rpart)
 library(rpart.plot)
 library(maptree)
 library(caret)
 library(gmodels)
+library(MASS)
+library(nnet)
+library(neuralnet)
+library(NeuralNetTools)
 ```
 
 
@@ -72,6 +78,7 @@ my_theme <- function(base_size = 10, base_family = "sans"){
 
 ```{r}
 names(cred) <- tolower(names(cred)) # changing the name of the variable into lowercase
+cred <- cred[,-1]
 ```
 
 
@@ -119,8 +126,17 @@ data.frame(variable = names(cred),
 
 As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary of categorical, while only few are numerical.  
 
-More than seeing the first values of our variables and their types, we also need to understand how distributed they are.  
-As an example, we can appreciate the summary of the variable *history* and a frequency table:
+More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
+We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
+
+```{r}
+plot_correlation(cred, type="all", title = "correlation graph")
+```
+
+
+
+
+In addition, we can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
 
 ```{r}
 c(summary(cred$history)) %>% as.data.frame %>%
@@ -138,13 +154,16 @@ table(cred$history) %>% kable(caption = "Frequency table of history",
     full_width = F
   )
 ```
+
+
+&nbsp;  
 &nbsp;  
 
-However, doing this for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
+However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
 ```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
 
-# for (i in 2:(length(cred)-1)) {
+# for (i in 1:(length(cred)-1)) {
 #   if (range(cred[, i] < 5)) {
 #     print(
 #       ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
@@ -345,7 +364,7 @@ Text...
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE }
 
-# for(i in 2:(length(cred) - 1)) {
+# for(i in 1:(length(cred) - 1)){
 #   print(
 #     ggplot(cred, aes(
 #       x = response, y = cred[, i] ,  group = response
@@ -598,11 +617,119 @@ sum(diag(glm.tab))/sum(glm.tab) # accuracy
 
 ## Neural Network 
 
-### Building the model
+### Building the model and optimizing it: selecting the number of neurones in the hidden layer
 
-### Optimizing the model: selecting the number of nodes and layers
+La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw) suggère de garder 1 seul layer un nb de neuronnes entre 1 et le nbr de dim: on va les tester tous et garder le meilleur...
+"In sum, for most problems, one could probably get decent performance (even without a second optimization step) by setting the hidden layer configuration using just two rules: (i) number of hidden layers equals one; and (ii) the number of neurons in that layer is the mean of the neurons in the input and output layers."
 
-### Predicting the values of the testing set
+```{r, results='hide'}
+# # creating our 30 models (with 1 to 30 neurones in the hidden layer)
+# nnet.model = list()
+# for (i in 1:30) {
+#   nnet.model[[i]] = nnet(as.factor(cred.train$response)~., data = cred.train, size=i, maxit=200, decay = 1)
+# } 
+# 
+# # making the predictions on the testing set
+# pred.nnet=list() 
+# for (i in 1:30){ 
+#   pred.nnet[i] = predict(nnet.model[i], cred.test) 
+#   pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , 1,  0)
+# } 
+# 
+# # creating the confusion matrices
+# tab.nnet=list() 
+# for (i in 1:30){ 
+#   tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
+# } 
+# 
+# # calculating the accuracy
+# acc.nnet = list()
+# for (i in 1:30) {
+#   acc.nnet[i] <-
+#     sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
+#     length(cred.test$response)
+# } 
+```
+
+```{r, results='hide', cache=TRUE}
+# Creating a multitude of models with variations regarding the number of neurones in the hidden layer and regarding the decay. We try as many neurones as we have variables (30) and different 7 decay, meaning that this operation computes 210 models and can take quite a while (count 1 to 2 sec per model). But this is the price to pay to have a well tuned model!!
+nnet.model = list()
+k <- 0
+for (j in 2 ^ (-6:0)) {
+  # for (j in seq(0,2)){
+  ifelse(k<=8, k <- k+1, k <- 1)
+  for (i in 1:length(cred)) {
+    nnet.model[[10 * i + k]] <- nnet(as.factor(cred.train$response) ~ ., data = cred.train,  maxit = 200,
+                                    size = i,
+                                    decay = j
+    )
+  }
+}
+
+nnet.model[sapply(nnet.model,is.null)] <- NULL
+
+# making the predictions on the testing set
+pred.nnet=list() 
+for (i in 1:length(nnet.model)){ 
+  pred.nnet[i] = predict(nnet.model[i], cred.test) 
+  pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , 1,  0)
+} 
+
+# creating the confusion matrices
+tab.nnet=list() 
+for (i in 1:length(nnet.model)){ 
+  tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
+} 
+
+# calculating the accuracy
+acc.nnet = list()
+for (i in 1:length(nnet.model)) {
+  acc.nnet[i] <-
+    sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
+    length(cred.test$response)
+} 
+```
+
+After having created different models with a different number of neurons in the hidden layers, we have to be able to access the created models and to select the best one based on it.  
+
+### Model selection and predicting the values of the testing set
+
+We present you the characteristics of the model with `r which.max(acc.nnet)` neurons in the hidden layer and that proposes the highest accuracy on the testing set among all.
+
+We can see that the plot of model can be quite complex, there a plenty of arrows... It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
+
+
+```{r, comment = NA, fig.width=10, fig.height=10}
+selected.nnet <- nnet.model[[which.max(acc.nnet)]] 
+paste("The selected model has", selected.nnet$n[2]) %>% paste("neurones in the hidden layer and a decay of", selected.nnet$decay) 
+
+# plot
+plotnet(nnet.model[[which.max(acc.nnet)]], alpha_val=0.1, 
+        circle_col="steelblue1", pos_col="blue", neg_col="red", bord_col="black")
+
+# confusion matrix
+tab.nnet[[which.max(acc.nnet)]] %>% kable(caption = "Confusion matrix of the fitted NNET model",
+                                          col.names = c("Predict 0", "Predict 1")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em") 
+
+# accuracy 
+paste("The obtained accuracy is equal to", acc.nnet[[which.max(acc.nnet)]]) # outstanding compared to our previous models!
+
+```
+
+We obtain a final accuracy of `r acc.nnet[[which.max(acc.nnet)]]` on our testing set.
+
+
+
+
+
 
 
 
@@ -611,6 +738,9 @@ sum(diag(glm.tab))/sum(glm.tab) # accuracy
 ## Support Vector Machine (SVM)
 
 ### Building the model
+
+
+
 
 ### Optimizing the model: selecting the number of nodes and layers
 

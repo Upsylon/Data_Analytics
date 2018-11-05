@@ -9,3 +9,12 @@ rpart.plot
 knitr
 cluster
 maptree
+DataExplorer
+corrr
+lattice
+caret
+gmodels
+MASS
+nnet
+neuralnet
+NeuralNetTools
