@@ -50,6 +50,7 @@ library(MASS)
 library(nnet)
 library(neuralnet)
 library(NeuralNetTools)
+library(kknn)
 ```
 
 
@@ -79,6 +80,7 @@ my_theme <- function(base_size = 10, base_family = "sans"){
 ```{r}
 names(cred) <- tolower(names(cred)) # changing the name of the variable into lowercase
 cred <- cred[,-1]
+cred$response <- as.factor(ifelse(cred$response==1, "good", "bad"))
 ```
 
 
@@ -335,7 +337,6 @@ ggplot(cred, aes(x = cred$response)) + geom_bar(stat = "count", position = "dodg
   ggtitle(str_c("Barplot of the response variable")) +
   xlab("Response variable") +
   ylab("Total") +
-  scale_x_continuous(breaks = c(0,1)) +
   my_theme()
 ```
 
@@ -364,22 +365,21 @@ Text...
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE }
 
-# for(i in 1:(length(cred) - 1)){
-#   print(
-#     ggplot(cred, aes(
-#       x = response, y = cred[, i] ,  group = response
-#     )) +
-#       geom_boxplot() +
-#       xlab("Response variable") +
-#       ylab(colnames(cred[i])) +
-#       ggtitle(str_c(
-#         "Interaction between\n ",
-#         paste(colnames(cred[i]), "and the\n response variable")
-#       )) +
-#       scale_x_continuous(breaks=c(0,1)) +
-#       my_theme()
-#   )
-# }
+for(i in 1:(length(cred) - 1)){
+  print(
+    ggplot(cred, aes(
+      x = response, y = cred[, i] ,  group = response
+    )) +
+      geom_boxplot() +
+      xlab("Response variable") +
+      ylab(colnames(cred[i])) +
+      ggtitle(str_c(
+        "Interaction between\n ",
+        paste(colnames(cred[i]), "and the\n response variable")
+      )) +
+      my_theme()
+  )
+}
 
 ```
 
@@ -479,13 +479,17 @@ rpart.plot(cart.pruned, main="Pruned decision tree")
 ### Predicting the values of the testing set
 
 ```{r}
-pred.cart <- predict(cart.pruned, newdata=cred.test, type="class")
-cart.tab <- table(Predictions=pred.cart, Observations=cred.test$response) # confusion matrix. 
-cart.tab %>% kable(caption="Confusion matrix for the CART model", col.names = c("Predict 0", "Predict 1")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "l") %>%
-  column_spec(1, border_right = T, width="5em") %>%
-  column_spec(2, width="6em") %>%
-  column_spec(3, width="6em") 
+pred.cart <- predict(cart.pruned, newdata = cred.test, type = "class")
+cart.tab <- table(Predictions = pred.cart, Observations = cred.test$response) # confusion matrix.
+cart.tab %>% kable(caption = "Confusion matrix for the CART model",
+                   col.names = c("Predict bad", "Predict good")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l") %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
 
 # sum(diag(cart.tab))/sum(cart.tab) # accuracy
 
@@ -550,17 +554,16 @@ summary(logit.step)
 
 ```{r}
 pred.logit.step <- ifelse(
-  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.5, 1, 0
+  predict(logit.step, newdata=cred.test, type="response") > 0.5, "good", "bad"
   ) # the predictions of the class
-pred.logit.step.prob <- predict(logit.step, newdata=cred[-index.train,], type="response")
+pred.logit.step.prob <- predict(logit.step, newdata=cred.test, type="response")
 
-cbind(pred.logit.step.prob,cred.test$response) %>% as.data.frame %>% 
-  ggplot(aes(x=V2, y = pred.logit.step.prob, group=V2)) + geom_boxplot() +
+data.frame(pred.logit.step.prob,cred.test$response) %>% 
+  ggplot(aes(x=cred.test$response, y = pred.logit.step.prob, group=cred.test$response)) + geom_boxplot() +
         my_theme() +
   ggtitle("Predicted probabilities against real values") +
   xlab("Values of the testing set") +
-  ylab("Predicted probabilities of the logistic regression") +
-  scale_x_continuous(breaks = c(0,1))
+  ylab("Predicted probabilities of the logistic regression") 
 ```
 
 ```{r}
@@ -591,7 +594,7 @@ Ca va baisser l'accuracy, mais ca va potentiellement nous faire perdre moins d'a
 
 ```{r}
 pred.logit_0.7 <- ifelse(
-  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.75, 1, 0
+  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.75, "good", "bad"
   ) # the predictions of the class
 ```
 
@@ -599,7 +602,7 @@ pred.logit_0.7 <- ifelse(
 glm.tab <-
   table(Observations = cred.test$response, Predictions = pred.logit_0.7) # confusion matrix.
 glm.tab %>% kable(caption = "Confusion matrix for the adapted Logistic regression model",
-                  col.names = c("Predict 0", "Predict 1")) %>%
+                  col.names = c("Predict bad", "Predict good")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
@@ -626,21 +629,21 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 # # creating our 30 models (with 1 to 30 neurones in the hidden layer)
 # nnet.model = list()
 # for (i in 1:30) {
-#   nnet.model[[i]] = nnet(as.factor(cred.train$response)~., data = cred.train, size=i, maxit=200, decay = 1)
-# } 
+#   nnet.model[[i]] = nnet(cred.train$response~., data = cred.train, size=i, maxit=200, decay = 1)
+# }
 # 
 # # making the predictions on the testing set
-# pred.nnet=list() 
-# for (i in 1:30){ 
-#   pred.nnet[i] = predict(nnet.model[i], cred.test) 
-#   pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , 1,  0)
-# } 
+# pred.nnet=list()
+# for (i in 1:30){
+#   pred.nnet[i] = predict(nnet.model[i], cred.test)
+#   pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , "good",  "bad")
+# }
 # 
 # # creating the confusion matrices
-# tab.nnet=list() 
-# for (i in 1:30){ 
+# tab.nnet=list()
+# for (i in 1:30){
 #   tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
-# } 
+# }
 # 
 # # calculating the accuracy
 # acc.nnet = list()
@@ -648,83 +651,82 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 #   acc.nnet[i] <-
 #     sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
 #     length(cred.test$response)
-# } 
+# }
 ```
 
 ```{r, results='hide', cache=TRUE}
-# Creating a multitude of models with variations regarding the number of neurones in the hidden layer and regarding the decay. We try as many neurones as we have variables (30) and different 7 decay, meaning that this operation computes 210 models and can take quite a while (count 1 to 2 sec per model). But this is the price to pay to have a well tuned model!!
-nnet.model = list()
-k <- 0
-for (j in 2 ^ (-6:0)) {
-  # for (j in seq(0,2)){
-  ifelse(k<=8, k <- k+1, k <- 1)
-  for (i in 1:length(cred)) {
-    nnet.model[[10 * i + k]] <- nnet(as.factor(cred.train$response) ~ ., data = cred.train,  maxit = 200,
-                                    size = i,
-                                    decay = j
-    )
-  }
-}
-
-nnet.model[sapply(nnet.model,is.null)] <- NULL
-
-# making the predictions on the testing set
-pred.nnet=list() 
-for (i in 1:length(nnet.model)){ 
-  pred.nnet[i] = predict(nnet.model[i], cred.test) 
-  pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , 1,  0)
-} 
-
-# creating the confusion matrices
-tab.nnet=list() 
-for (i in 1:length(nnet.model)){ 
-  tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
-} 
-
-# calculating the accuracy
-acc.nnet = list()
-for (i in 1:length(nnet.model)) {
-  acc.nnet[i] <-
-    sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
-    length(cred.test$response)
-} 
+# # Creating a multitude of models with variations regarding the number of neurones in the hidden layer and regarding the decay. We try as many neurones as we have variables (30) and different 7 decay, meaning that this operation computes 210 models and can take quite a while (count 1 to 2 sec per model). But this is the price to pay to have a well tuned model!!
+# nnet.model = list()
+# k <- 0
+# for (j in 2 ^ (-6:0)) {
+#   ifelse(k<=8, k <- k+1, k <- 1)
+#   for (i in 1:length(cred)) {
+#     nnet.model[[10 * i + k]] <- nnet(cred.train$response ~ ., data = cred.train,  maxit = 200,
+#                                     size = i,
+#                                     decay = j
+#     )
+#   }
+# }
+# 
+# nnet.model[sapply(nnet.model,is.null)] <- NULL
+# 
+# # making the predictions on the testing set
+# pred.nnet=list()
+# for (i in 1:length(nnet.model)){
+#   pred.nnet[i] = predict(nnet.model[i], cred.test)
+#   pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , "good",  "bad")
+# }
+# 
+# # creating the confusion matrices
+# tab.nnet=list()
+# for (i in 1:length(nnet.model)){
+#   tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
+# }
+# 
+# # calculating the accuracy
+# acc.nnet = list()
+# for (i in 1:length(nnet.model)) {
+#   acc.nnet[i] <-
+#     sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
+#     length(cred.test$response)
+# }
 ```
 
 After having created different models with a different number of neurons in the hidden layers, we have to be able to access the created models and to select the best one based on it.  
 
 ### Model selection and predicting the values of the testing set
 
-We present you the characteristics of the model with `r which.max(acc.nnet)` neurons in the hidden layer and that proposes the highest accuracy on the testing set among all.
+We present you the characteristics of the model with ** REMETTRE BIEN ICI...** r which.max(acc.nnet) neurons in the hidden layer and that proposes the highest accuracy on the testing set among all.
 
 We can see that the plot of model can be quite complex, there a plenty of arrows... It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
 
 
 ```{r, comment = NA, fig.width=10, fig.height=10}
-selected.nnet <- nnet.model[[which.max(acc.nnet)]] 
-paste("The selected model has", selected.nnet$n[2]) %>% paste("neurones in the hidden layer and a decay of", selected.nnet$decay) 
-
-# plot
-plotnet(nnet.model[[which.max(acc.nnet)]], alpha_val=0.1, 
-        circle_col="steelblue1", pos_col="blue", neg_col="red", bord_col="black")
-
-# confusion matrix
-tab.nnet[[which.max(acc.nnet)]] %>% kable(caption = "Confusion matrix of the fitted NNET model",
-                                          col.names = c("Predict 0", "Predict 1")) %>%
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = F,
-    position = "l"
-  ) %>%
-  column_spec(1, border_right = T, width = "5em") %>%
-  column_spec(2, width = "6em") %>%
-  column_spec(3, width = "6em") 
-
-# accuracy 
-paste("The obtained accuracy is equal to", acc.nnet[[which.max(acc.nnet)]]) # outstanding compared to our previous models!
+# selected.nnet <- nnet.model[[which.max(acc.nnet)]]
+# paste("The selected model has", selected.nnet$n[2]) %>% paste("neurones in the hidden layer and a decay of", selected.nnet$decay)
+# 
+# # plot
+# plotnet(nnet.model[[which.max(acc.nnet)]], alpha_val=0.1,
+#         circle_col="steelblue1", pos_col="blue", neg_col="red", bord_col="black")
+# 
+# # confusion matrix
+# tab.nnet[[which.max(acc.nnet)]] %>% kable(caption = "Confusion matrix of the fitted NNET model",
+#                                           col.names = c("Predict good", "Predict bad")) %>%
+#   kable_styling(
+#     bootstrap_options = c("striped", "hover", "condensed"),
+#     full_width = F,
+#     position = "l"
+#   ) %>%
+#   column_spec(1, border_right = T, width = "5em") %>%
+#   column_spec(2, width = "6em") %>%
+#   column_spec(3, width = "6em")
+# 
+# # accuracy
+# paste("The obtained accuracy is equal to", acc.nnet[[which.max(acc.nnet)]]) # outstanding compared to our previous models!
 
 ```
 
-We obtain a final accuracy of `r acc.nnet[[which.max(acc.nnet)]]` on our testing set.
+We obtain a final accuracy of ** REMETTRE BIEN ICI...** r acc.nnet[[which.max(acc.nnet)]] on our testing set.
 
 
 
@@ -739,10 +741,7 @@ We obtain a final accuracy of `r acc.nnet[[which.max(acc.nnet)]]` on our testing
 
 ### Building the model
 
-
-
-
-### Optimizing the model: selecting the number of nodes and layers
+### Optimizing the model: selecting good cost and gamma parameters
 
 ### Predicting the values of the testing set
 
@@ -750,6 +749,62 @@ We obtain a final accuracy of `r acc.nnet[[which.max(acc.nnet)]]` on our testing
 ## Model x (K-nn)
 
 ### Building the model
+
+```{r}
+scaled.cred <- scale(cred[,-length(cred)]) %>% data.frame(response=cred$response)
+# scaling except last row (except response)
+
+scaled.cred.train <- scale(cred.train[,-length(cred.train)]) %>% data.frame(response=cred.train$response)
+scaled.cred.test <- scale(cred.test[,-length(cred.test)]) %>% data.frame(response=cred.test$response)
+```
+
+```{r}
+# Creation of 20 KNN: 10 with i={1,..,10} and k = 2 and 10 with i={1,..,10} and k = 3 
+knn.model = list()
+k <- 0
+for (j in 2:3) {
+  for (i in 1:20) {
+    knn.model[[20 * k + i]] <- kknn(response ~ ., k=i, distance=j,train=scaled.cred.train, test=scaled.cred.test)
+  }
+  k <- k+1
+}
+
+# making the predictions on the testing set
+pred.knn=list()
+for (i in 1:length(knn.model)){
+  pred.knn[[i]] = table(Prediction=knn.model[[i]]$fitted.value, Actual=cred.test$response)
+}
+
+# calculating the accuracy
+acc.knn = list()
+for (i in 1:length(knn.model)) {
+  acc.knn[i] <- sum(diag(pred.knn[[i]]))/250
+}
+```
+
+```{r, comment=NA}
+selected.knn <- knn.model[[which.max(acc.knn)]] # selected knn
+paste("The selected knn model uses a distance of", selected.knn$distance) %>% paste("and is computed with the", ifelse(which.max(acc.knn)<20,which.max(acc.knn),which.max(acc.knn)-20)) %>% paste("neerest neighbors.") %>%
+paste("The obtained accuracy is equal to", acc.knn[[which.max(acc.knn)]]) 
+
+# confusion matrix
+pred.knn[which.max(acc.knn)] %>% kable(caption = "Confusion matrix of the fitted KNN model",
+                                          col.names = c("Predict good", "Predict bad")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) 
+
+
+```
+
+
+
+Petit DB donc pas un pb que "lazy learner"
+
+
+
 
 ### Optimizing the model: selecting the number of nodes and layers
 
