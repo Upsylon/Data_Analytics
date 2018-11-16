@@ -313,11 +313,9 @@ cred$guarantor[which(guarantor==2)] <- 0
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
 ```{r}
-cred$present_resident <- cred$present_resident - 1
+present_resident <- subtract(present_resident, 1)
 ```
- 
-**Variable num_credits: y'a pas de 0, pas cohérent...**
- 
+
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
 We now have to focus in detail to the response variable on which the predictions should be made.   
  
@@ -373,14 +371,9 @@ for(i in 1:(length(cred) - 1)){
       my_theme()
   )
 }
-
 ```
 
 --> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
-
-
-
-
 
 
 # Modelling {#Mod}
@@ -397,15 +390,12 @@ cred.test <- cred[-index.train,]
 
 In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long... We prefer to build a function to be able to retrieve at any time based on a confusion matrix:
 
-
 ```{r}
 # Creating of a function to retrieve the accuracy from a confusion matrix
 accuracy <- function(c){
   print(sum(diag(c))/sum(c))
 }
 ```
-
-
 
 ## CART {#CART}
 
@@ -420,7 +410,6 @@ accuracy <- function(c){
 cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
 ```
 
-
 ```{r}
 rpart.plot(cart.model, main="Original decision tree")
 ```
@@ -429,7 +418,7 @@ rpart.plot(cart.model, main="Original decision tree")
 
 ### Tuning the model: Pruning
 
-As already said, our complex tree has to be pruned in order reduce its complexity. To do so, we will use the *1 - SE rule*.   
+As already said, our complex tree has to be pruned in order to reduce its complexity. To do so, we will use the *1 - SE rule*.   
 The idea of this rule is really general. As one would establish a t-test in statistics to see if two measures are *statistically different*, the 1 - SE rule tries to establish if two models produce statistically different results (if we can affirm that one outperforms the other).  
 We therefore consider the *xerror* (the criterion in which we are interested in and that we want to minimize) and its standard deviation *xstd*. A models that falls within 1 standard deviation of the most complex model can be considered as equivalent in term of performance. Therefore, using this rule, we will be able to prune the tree to get a much simplier model, without loosing in quality as the performance capability of our new model will be *statistically the same* as the first one.  
 To select the size of our pruned tree, we will look at the xerror of our original tree (the most complex one) and add one standard error *xstd*. We will then select the simplier tree with an xerror that lies within the calculated value.
@@ -474,7 +463,6 @@ We thus prune the tree at this value (the *R* function requires to indicate CP.)
 ```{r}
 cart.pruned <- prune(cart.model, cp=cp.pruned)
 ```
-
 
 ```{r, echo=FALSE}
 rpart.plot(cart.pruned, main="Pruned decision tree")
