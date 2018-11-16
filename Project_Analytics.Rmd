@@ -119,7 +119,6 @@ data.frame(variable = names(cred),
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "18em") %>%
   scroll_box(width = "65%", height = "250px")
-  
 ```
 
 
@@ -131,9 +130,8 @@ More than seeing the first values of our variables and their types, we also need
 We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
 
 ```{r}
-plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents.
+plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, fait des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
 ```
-
 
 
 In addition, we can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
@@ -157,7 +155,6 @@ table(cred$history) %>% kable(caption = "Frequency table of history",
 
 
 &nbsp;  
-&nbsp;  
 
 However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
@@ -177,7 +174,7 @@ However, presenting such a summary for all variables can be long and boring. It 
 #   } else
 #   {
 #     print(
-#       ggplot(cred, aes(y = cred[, i])) + geom_boxplot() + 
+#       ggplot(cred, aes(y = cred[, i])) + geom_boxplot() +
 #         ylab(colnames(cred[i])) +
 #       ggtitle(str_c("Boxplot of\n ", paste(
 #         colnames(cred[i])
@@ -197,13 +194,12 @@ In addition, these graphs enable un too see that some data are not tidy. For ins
 In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
-Let's first look at our variable *age*. We assume that, generally, a person will never live more than a hundred year, and will never contract a credit at such ages. This is why the data with $Age > 100$ are definitely wrong recorded. We will therefore have to replace them in our database.  
-First, we have to find how much data are potentially dirty according to our assumptions and to localisate them in order to replace them.  
+Let's first look at our variable *age*. We assume that, generally, a person will not live more than a hundred year, and will not contract a credit at such age. This is why the data with $Age > 100$ are most likely wrongly recorded. We will therefore have to replace them in our database.  
+First, we have to find how much data are potentially dirty according to our assumptions and to localise them in order to replace them.  
 
 ```{r, echo=FALSE}
 attach(cred)
 ```
-
 
 ```{r, echo=FALSE}
 table(age>=100) %>% kable(caption="Number of instances with age > 100") %>%
@@ -218,8 +214,6 @@ which(age>100) %>% kable(caption="Position of instance with age > 100") %>%
 ```
 
 &nbsp;  
-&nbsp;  
-
 
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
@@ -244,8 +238,9 @@ Note that for calculating the median, our problematic value should not be used.
 cred$age[which(age>75)] <- median(age[age!=max(age)])
 ```
 
-An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to eachother ($mean = `r mean(age)`$ while $median = `r median(age)`$).  
+An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to eachother ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
 
+&nbsp;  
 
 Next, we also have to deal with our two categorical data that have been wrong recorded:  
     - one in *education*  
@@ -275,7 +270,6 @@ edu %>% kable(caption = "Frequency table of education", align = 'c') %>%
   column_spec(1, border_right = T)
 ```
 
-
 &nbsp;
 
 It is indeed more appropriate to replace our value by 0 as the probability of belonging to this class is close to 20 times bigger.  
@@ -285,7 +279,6 @@ cred$education[which(education==-1)] <- 0
 ```
 
 &nbsp;  
-
 
 Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
 
@@ -322,7 +315,6 @@ In addition, the variable *present_resident* is also problematic as it doesn't h
 ```{r}
 cred$present_resident <- cred$present_resident - 1
 ```
- 
  
 **Variable num_credits: y'a pas de 0, pas cohérent...**
  
