@@ -106,6 +106,8 @@ Parler de:
 
 ### Explanatory variables
 
+#### Overview 
+
 Before beginning any kind of analysis, we have to understand the data we are working with. 
 
 ```{r}
@@ -197,6 +199,10 @@ In addition, these graphs enable un too see that some data are not tidy. For ins
 In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
+#### Problematic variables
+
+##### *Age* 
+
 Let's first look at our variable *age*. We assume that, generally, a person will never live more than a hundred year, and will never contract a credit at such ages. This is why the data with $Age > 100$ are definitely wrong recorded. We will therefore have to replace them in our database.  
 First, we have to find how much data are potentially dirty according to our assumptions and to localisate them in order to replace them.  
 
@@ -224,7 +230,7 @@ which(age>100) %>% kable(caption="Position of instance with age > 100") %>%
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
 We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$.  
-However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values.  
+However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values (which is logical as young people generally have less money than elders and therefore are more subject to ask for credits).  
 
 ```{r, fig.height=4, fig.width=4, message=FALSE, warning=FALSE, echo=FALSE}
 ggplot(cred, aes(x = cred$age)) + 
@@ -252,6 +258,8 @@ Next, we also have to deal with our two categorical data that have been wrong re
     - one in *guarantor*
 
 They also have to be cleaned. 
+
+##### *Education*
 
 The following is again the barplot of *education*. 
 
@@ -286,6 +294,7 @@ cred$education[which(education==-1)] <- 0
 
 &nbsp;  
 
+##### *Guarantor*
 
 Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
 
@@ -316,6 +325,8 @@ Again, for the same reasons, it is preferable to replace the wrong recorded data
 ```{r}
 cred$guarantor[which(guarantor==2)] <- 0
 ```
+
+##### *present_resident*
 
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
@@ -393,18 +404,18 @@ for(i in 1:(length(cred) - 1)){
 
 # Modelling {#Mod}
 
-Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have to be used to build the model. 
-In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets. 
+Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model. 
+In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
+A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
-set.seed(111) # a seed (the number is the source of our imagination!)
-index.train <- sample(1:nrow(cred), size=nrow(cred)*0.75, replace=FALSE)
+set.seed(12345) 
+index.train <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
 cred.train <- cred[index.train,]
 cred.test <- cred[-index.train,]
 ```
 
-In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long... We prefer to build a function to be able to retrieve at any time based on a confusion matrix:
-
+To evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long... We prefer to build a function to be able to retrieve at any time based on a confusion matrix:  
 
 ```{r}
 # Creating of a function to retrieve the accuracy from a confusion matrix
@@ -551,7 +562,7 @@ summary(logit.model)
 --> Dire l'idée de AIC (arbritrage entre perf du model et complexité)
 --> Expliquer comment ca marche
 
-### Optimizing the model: Stepwise selection according to AIC criteria
+### Tuning the model: Stepwise selection according to AIC criteria
 
 
 ```{r, results='hide', echo=TRUE}
@@ -641,19 +652,23 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 
 --> On essaye de trouver le nombre "optimal" de neurones. Vu que neural network utilise des valeurs aléatoires au début pour lancer l'algo etc. Ca varie. On calcule donc 10 fois l'accuracy liée à chaque nombre de neurones et voir si y'a un nb de neurones optimal.
 
+**UTILISER A CHAQUE ITERATION DES TRAIN ET DES TESTS SETS DIFFERENTS** !
 
 ```{r, cache=TRUE, results='hide'}
 
 acc.nnet.cv <- matrix(nrow=30,ncol=10) 
 for (j in 1:10){
+index.train1 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
+cred.train1 <- cred[index.train1,]
+cred.test1 <- cred[-index.train1,]
 nnet.model = list()
 for (i in 11:30) {
   nnet.model[[i]] = nnet(cred.train$response~., data = cred.train, size=i, maxit=200, decay = 1)
 }
 pred.nnet=list()
 for (i in 11:30){
-  pred.nnet[i] = predict(nnet.model[i], cred.test)
-  pred.nnet[[i]] <- ifelse(pred.nnet[[i]]  > 0.5 , "good",  "bad")
+  pred.nnet[i] <- predict(nnet.model[i], cred.test, type="class")
+  
 }# making the predictions
   tab.nnet=list()
 for (i in 11:30){
@@ -670,7 +685,7 @@ for (i in 11:30) {
 
 ```
 
-NOTE: c'est pas vraiment une cross-validation vu qu'on utilise le MEME test et training set, mais le principe est le même. On est en train de faire le "tuning" du modèle et la CV sera faite plus tard.
+On utilise à chaque itération des train et test sets différents.
 
 ```{r}
 mean.acc.nnet.cv <- numeric(30)
@@ -678,46 +693,92 @@ sd.acc.nnet.cv <- numeric(30)
 for(i in 11:30){mean.acc.nnet.cv[i] <- mean(acc.nnet.cv[i,])
 sd.acc.nnet.cv[i] <- sd(acc.nnet.cv[i,])}
 mean.acc.nnet.cv[-c(1:10)] # average mean for the models with i = 11,..,30 nodes
-sd.acc.nnet.cv[-c(1:10)] # average sd for the models with i = 11,..,30 nodes
-accu <- data.frame(Average=mean.acc.nnet.cv[-c(1:10)], Sd = sd.acc.nnet.cv[-c(1:10)], Neurones = c(11:30))
+accu <- data.frame(Average=mean.acc.nnet.cv[-c(1:10)], Neurones = c(11:30))
 ```
 
-Using the *1 - SE rule*, it is possible to compare our neural network with different numbers of neurones in order to see which ones are considered to be equivalent. 
+The 
 
 ```{r, comment=NA}
-mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] - sd.acc.nnet.cv[which.max(mean.acc.nnet.cv)]
+which.max(mean.acc.nnet.cv) # neurones leading to the model with the highest accuracy
+mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] # the accuracy
 ```
 
-The maximum accuracy to which we substract its standard deviation is equal to `r mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] - sd.acc.nnet.cv[which.max(mean.acc.nnet.cv)]`
-. All models with an accuracy more than this value can be considered.  
-On the following plot, we can see at a glance which models can to be considered and that are above the red line representing the model with maximum average accuracy to which we substracted its standard deviation.
-
+The maximum accuracy  is equal to `r mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)]`.  
+On the following plot, we can see at a glance the accuracies and the model that we are going to select.
 
 ```{r, echo=FALSE}
-accu %>% ggplot() + 
+accu %>% ggplot() +
   geom_point(aes(x = Neurones, y = Average)) +
-  geom_hline(yintercept = mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] - sd.acc.nnet.cv[which.max(mean.acc.nnet.cv)], col='red') + 
-  scale_x_continuous(breaks = c(11:30)) + ylab("Average accuracy") + ggtitle("Average accuracy according to the number of neurones in our network") + my_theme()
+  geom_hline(yintercept = mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)], col =
+               'red') +
+  scale_x_continuous(breaks = c(11:30)) + scale_y_continuous(breaks = round(c(
+    seq(min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]), max(mean.acc.nnet.cv),
+    by = (max(mean.acc.nnet.cv) - min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]))/4
+  )),3)) + ylab("Average accuracy") + ggtitle("Average accuracy according to the number of neurones in our network") + my_theme()
 ```
 
-<!-- We can directly see which models satisfy the rule, and the simplest one should be considered in this case (to reduce overfitting). This model is the model with `r which(mean.acc.nnet.cv==mean.acc.nnet.cv[mean.acc.nnet.cv>mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] - sd.acc.nnet.cv[which.max(mean.acc.nnet.cv)]][1])` neurones.   -->
-In addition, based on some [litterature](https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw), one can see that a rule of thumb proposes to take a number of neurones that is the average between our input nodes (30) and outputs (1 nodes with two level), which should therefore be 16 neurones.  
-As the model linked with this number of neurones satisfies and the rule of thumb and the *1 - SE* rule, we decide to choose this model no fit our neural network.  
+We can directly see which that the model with `r which.max(mean.acc.nnet.cv)` neurones presents the highest accuracy.
+
 Obviously, this choice is subject to discussion and other methods could be preferred. At the end, the differences resulting from the use of our different models are really low, meaning that they have all quite similar predictive capabilities. 
 
+We can therefore continue to explore further the model with `r which.max(mean.acc.nnet.cv)` neurones that we retained. 
 
-We can therefore continue to explore further the model with 16 neurones that we retained. 
+#### TESTING DIFFERENT DECAYS
+
+Note, on a considéré plus de decay, mais pour plus de "computational efficicency", on va en display seulement certains...
+
+```{r, cache = TRUE, results='hide'}
+acc.nnet.cv2 <- matrix(nrow=length(seq(2^-8,2,2^-3)),ncol=10) # we considered initially extreme small values like seq(0,2^-5,2^-8), seq(0,2^-4,2^-10) intermediate and high and the range that we propose here best fits the data.
+j <- 1
+for (j in 1:10){
+index.train2 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
+cred.train2 <- cred[index.train2,]
+cred.test2 <- cred[-index.train2,]
+nnet.model2 = list()
+pred.nnet2=list()
+tab.nnet2=list()
+acc.nnet2 = list()
+k <- 1
+for (i in seq(2^-8,2,2^-3)) {
+  nnet.model2[[k]] = nnet(cred.train$response~., data = cred.train, size=which.max(mean.acc.nnet.cv), maxit=200, decay = i)
+pred.nnet2[[k]] <- predict(nnet.model2[k], cred.test, type="class") #  making the predictions
+tab.nnet2[[k]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet2[k]))
+acc.nnet2[[k]] <- sum(ifelse(cred.test$response == unlist(pred.nnet2[k]), 1, 0), na.rm = TRUE) /
+    length(cred.test$response)
+  acc.nnet.cv2[k,j] <- acc.nnet2[[k]]
+  k <- k+1
+  } 
+  j <- j+1
+}
+```
+
+
+```{r}
+mean.acc.nnet.cv2 <- numeric(16)
+sd.acc.nnet.cv2 <- numeric(16)
+for(i in 1:16){mean.acc.nnet.cv2[i] <- mean(acc.nnet.cv2[i,])
+sd.acc.nnet.cv2[i] <- sd(acc.nnet.cv2[i,])}
+mean.acc.nnet.cv2 # average mean for the models with i = 11,..,30 nodes
+accu2 <- data.frame(Average=mean.acc.nnet.cv2, Decay = seq(2^-8,2,2^-3))
+```
+
+
+```{r, comment=NA}
+which.max(mean.acc.nnet.cv2) # neurones leading to the model with the highest accuracy
+mean.acc.nnet.cv2[which.max(mean.acc.nnet.cv2)] # the accuracy
+round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1) # the retained decay
+```
 
 ### Model selection and predicting the values of the testing set
 
-We present you the characteristics of the model retained, with 16 neurons in the hidden layer.  
+We present you the characteristics of the model retained, with `r which.max(mean.acc.nnet.cv)` neurones in the hidden layer and a decay of `r round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1)`.
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
 
 ```{r, results='hide'}
 
-nnet.model.retained <- nnet(cred.train$response ~ .,data = cred.train,maxit = 200,size = 16, decay = 1)
+nnet.model.retained <- nnet(cred.train$response ~ .,data = cred.train,maxit = 200,size = which.max(mean.acc.nnet.cv), decay = round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1))
 
-pred.nnet.retained <- ifelse(predict(nnet.model.retained, cred.test) > 0.5, "good",  "bad") # predictions on the test set
+pred.nnet.retained <- predict(nnet.model.retained, cred.test, type="class") # predictions on the test set
 
 
 tab.nnet.retained <- table(Reality = cred.test$response, Predicted = unlist(pred.nnet.retained)) # confusion matrix
@@ -726,15 +787,19 @@ acc.nnet.retained <- sum(ifelse(cred.test$response == unlist(pred.nnet.retained)
   length(cred.test$response) # accuracy
 ```
 
-In addition, we can plot our model. It can be quite complex, there a plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
+In addition, we can plot our neural network:
 
-
-```{r, comment = NA, fig.width=10, fig.height=10}
+```{r, comment = NA, fig.width=10, fig.height=10, echo=FALSE}
 
 # plot
 plotnet(nnet.model.retained, alpha_val=0.1,
         circle_col="steelblue1", pos_col="blue", neg_col="red", bord_col="black", pad_x=0.8)
+```
 
+This graph shows that our model can be quite complex, there a plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
+
+
+```{r, echo=FALSE}
 # confusion matrix
 tab.nnet.retained %>% kable(caption = "Confusion matrix of the fitted NNET model",
                                           col.names = c("Predict good", "Predict bad")) %>%
@@ -748,7 +813,21 @@ tab.nnet.retained %>% kable(caption = "Confusion matrix of the fitted NNET model
   column_spec(3, width = "6em")
 ```
 
-We obtain a final accuracy of `r acc.nnet.retained` on our testing set.
+We obtain a final accuracy of `r round(acc.nnet.retained,3) ` on our testing set.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -798,7 +877,7 @@ for (i in 1:length(knn.model)) {
 }
 ```
 
-```{r, comment=NA}
+```{r, comment=NA, echo=FALSE}
 selected.knn <- knn.model[[which.max(acc.knn)]] # selected knn
 paste("The selected knn model uses a distance of", selected.knn$distance) %>% paste("and is computed with the", ifelse(which.max(acc.knn)<20,which.max(acc.knn),which.max(acc.knn)-20)) %>% paste("neerest neighbors.") %>%
 paste("The obtained accuracy is equal to", acc.knn[[which.max(acc.knn)]]) 
