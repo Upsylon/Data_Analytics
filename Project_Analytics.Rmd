@@ -96,13 +96,13 @@ Parler de:
 - [à compléter...]
 
 --> Exploration des données = 1st insight
---> Modelling: train/set set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
+--> Modelling: train/test set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
 --> Cross validation avec les meilleurs de chq models pour selectionner le grand gagnant...
 
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
 
 
-## Exploratory analysis 
+## Exploratory analysis {#Exp}
 
 ### Explanatory variables
 
@@ -118,20 +118,20 @@ data.frame(variable = names(cred),
   column_spec(1, width = "10em", border_right = T) %>%
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "18em") %>%
-  scroll_box(width = "70%", height = "200px")
+  scroll_box(width = "65%", height = "250px")
   
 ```
 
 
 &nbsp;
 
-As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary of categorical, while only few are numerical.  
+As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical.  
 
 More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
 We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
 
 ```{r}
-plot_correlation(cred, type="all", title = "correlation graph")
+plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents.
 ```
 
 
