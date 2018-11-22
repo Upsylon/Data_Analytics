@@ -10,8 +10,8 @@ output: html_document
  - [Modelling](#Mod)
     - [CART](#CART)
     - [Logistic Regression](#Logit)
-    - [....]()
-    - [....]()
+    - [Neural Network](#NN)
+    - [K-Nearest Neighbors](#KNN)
     - [....]()
  - [Cross Validation Approach](#CV)
  - [...](#)
@@ -113,10 +113,12 @@ Before beginning any kind of analysis, we have to understand the data we are wor
 ```{r}
 data.frame(variable = names(cred),
            classe = sapply(cred, typeof),
-           first_values = sapply(cred, function(x) paste0(head(x),  collapse = ", ")),
+           first_values = sapply(cred, 
+                                 function(x) paste0(head(x),  collapse = ", ")),
            row.names = NULL) %>% 
   kable(caption="Overview of our data") %>% 
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F) %>%
   column_spec(1, width = "10em", border_right = T) %>%
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "18em") %>%
@@ -140,7 +142,8 @@ In addition, we can appreciate the summary of the different variables. The frequ
 
 ```{r, echo=FALSE}
 c(summary(cred$history)) %>% as.data.frame %>%
-  kable(caption = "Summary of variable history", align = "l", col.names = c("Value")) %>%
+  kable(caption = "Summary of variable history", 
+        align = "l", col.names = c("Value")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
@@ -157,36 +160,39 @@ table(cred$history) %>% kable(caption = "Frequency table of history",
 
 
 &nbsp;  
+&nbsp;  
+
 
 However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
 ```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
 
-# for (i in 1:(length(cred)-1)) {
-#   if (range(cred[, i] < 5)) {
-#     print(
-#       ggplot(cred, aes(x = cred[, i])) + geom_bar(stat = "count", position = "dodge") +
-#         ggtitle(str_c("Barplot of\n", paste(
-#           colnames(cred[i])
-#         ))) +
-#         xlab(colnames(cred[i])) +
-#         ylab("Total") +
-#         my_theme()
-#     )
-#   } else
-#   {
-#     print(
-#       ggplot(cred, aes(y = cred[, i])) + geom_boxplot() +
-#         ylab(colnames(cred[i])) +
-#       ggtitle(str_c("Boxplot of\n ", paste(
-#         colnames(cred[i])
-#       ))) +
-#         my_theme() +
-#         theme(
-#         axis.text.x=element_blank())
-#     )
-#   }
-# }
+for (i in 1:(length(cred)-1)) {
+  if (range(cred[, i] < 5)) {
+    print(
+      ggplot(cred, aes(x = cred[, i])) +
+        geom_bar(stat = "count", position = "dodge") +
+        ggtitle(str_c("Barplot of\n", paste(
+          colnames(cred[i])
+        ))) +
+        xlab(colnames(cred[i])) +
+        ylab("Total") +
+        my_theme()
+    )
+  } else
+  {
+    print(
+      ggplot(cred, aes(y = cred[, i])) + geom_boxplot() +
+        ylab(colnames(cred[i])) +
+        ggtitle(str_c("Boxplot of\n ", paste(
+          colnames(cred[i])
+        ))) +
+        my_theme() +
+        theme(
+          axis.text.x=element_blank())
+    )
+  }
+}
 
 ```
 
@@ -266,10 +272,12 @@ Here, the likelihood that this wrong recorded data is equal to $0$ is clearly hi
 We can confirm these first assumption with a frequency table:  
 
 ```{r, echo=FALSE}
-edu <- rbind(table(education), paste(round(prop.table(table(education)) * 100, 1), "%"))
+edu <- rbind(table(education), 
+             paste(round(prop.table(table(education)) * 100, 1), "%"))
 rownames(edu) <- c("sample size", "proportion")
 edu %>% kable(caption = "Frequency table of education", align = 'c') %>% 
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                full_width = F) %>%
   column_spec(1, border_right = T)
 ```
 
@@ -286,7 +294,8 @@ cred$education[which(education==-1)] <- 0
 Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
 
 ```{r, echo=FALSE}
-gua <- rbind(table(guarantor), paste(round(prop.table(table(guarantor)) * 100, 1), "%"))
+gua <- rbind(table(guarantor), 
+             paste(round(prop.table(table(guarantor)) * 100, 1), "%"))
 rownames(gua) <- c("sample size", "proportion")
 gua %>% kable(caption = "Frequency table of guarantor", align = 'c') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
@@ -316,7 +325,7 @@ cred$guarantor[which(guarantor==2)] <- 0
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
 ```{r}
-present_resident <- subtract(present_resident, 1)
+cred$present_resident <- subtract(cred$present_resident, 1)
 ```
 
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
@@ -325,10 +334,12 @@ We now have to focus in detail to the response variable on which the predictions
 ### Response variable
 
 As our final goal is to predict if a customer should be classified as a risky one or not, we have to have a particular look at our response variable that establishes if an applicant presents a good or a bad risk.  
+Let's first have a look at its distribution:  
 
 ```{r, echo=FALSE}
-cred$response <- as.factor(ifelse(cred$response==1, "good", "bad")) # tranform it as a factor
-ggplot(cred, aes(x = cred$response)) + geom_bar(stat = "count", position = "dodge") +
+cred$response <- as.factor(ifelse(cred$response==1, "good", "bad")) 
+ggplot(cred, aes(x = cred$response)) + 
+  geom_bar(stat = "count", position = "dodge") +
   ggtitle(str_c("Barplot of the response variable")) +
   xlab("Response variable") +
   ylab("Total") +
@@ -336,9 +347,11 @@ ggplot(cred, aes(x = cred$response)) + geom_bar(stat = "count", position = "dodg
 ```
 
 ```{r, echo=FALSE}
-res <- rbind(table(response), paste(round(prop.table(table(response)) * 100, 1), "%"))
+res <- rbind(table(response), 
+             paste(round(prop.table(table(response)) * 100, 1), "%"))
 rownames(res) <- c("sample size", "proportion")
-res %>% kable(caption = "Frequency table of our response variable", align = 'c') %>% 
+res %>% kable(caption = "Frequency table of our response variable", 
+              align = 'c') %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
                 full_width = F) %>%
   column_spec(1, border_right = T) %>%
@@ -348,9 +361,10 @@ res %>% kable(caption = "Frequency table of our response variable", align = 'c')
 
 As we can see, if a random customer steps in the bank, the *a priori* probability that he will present a good ranking will be of 70%.  
 Without any calculations, the bank has more chances to make a good decision when octroying a credit.  
-However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model that will have an accuracy much better than these initial 70% that are obtained using a naive method of always octroying a credit.  
+However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model to improve this initial accuracy that is obtained using a naive method of always octroying a credit.   
+Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "bad" credit is predicted as "good".  
 
-We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the expanatory variables and the response variable.
+We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
 
 ### Interactions between the explanatory variables and the response variable
 
@@ -376,18 +390,22 @@ for(i in 1:(length(cred) - 1)){
 }
 ```
 
+
 --> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
+
+** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ??!!** 
 
 
 # Modelling {#Mod}
 
-Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model. 
+Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model.  
 In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
 A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
-set.seed(12345) 
-index.train <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
+# Creation of testing and training sets
+set.seed(1234) 
+index.train <- sample(1:nrow(cred), size = nrow(cred) * 0.7, replace = FALSE)
 cred.train <- cred[index.train,]
 cred.test <- cred[-index.train,]
 ```
@@ -403,14 +421,18 @@ accuracy <- function(c){
 }
 ```
 
+We can now begin to work on the different models that we will use in order to make our predictions.  
+
 ## CART {#CART}
 
-** Petite description de CART, ...**
---> Comment c'est calculé (decrease of impurity criterion)
---> iterative procedure etc.
+First, we begin our analysis by using a decision (classification) tree.   
+
+The goal of a decision tree is to predict the final class of our response variable ("good" or "bad") by using a succession of binary rules to apply to our data.   
+Each node is created thanks to an algorithm that aims to minimize an impurity criterion. The feature and its underlying value  that maximises the impurity reduction (that "best splits"the dataset in two) will be selected. This procedure is repeated until a stopping rule is reached.  
+At the end, we will have multiple branches that will all lead to the final forecast that we will make for a given instances.  
+Better than words, let's compute the model and have a look at it.  
 
 ### Building the model
-
 
 ```{r}
 cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
@@ -420,12 +442,14 @@ cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
 rpart.plot(cart.model, main="Original decision tree")
 ```
 
---> At this time, we have obtained a decision tree with good prediction capabilities, but that is also really complex (a lot of split and of branches). An idea to simplify this model without loosing too much predictive capabilities, it could be useful to prune it, keeping only the most important splits linked to the most important variables.
+--> At this time, we have obtained a decision tree that can be used to do the predictions. At it node, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
+However, this tree is also really complex: there are a lot of split and of branches.  
+We have to tune this initial model and make it more simple. We will simplify this model without loosing  predictive capabilities by pruning it, keeping only the most important splits linked to the most important variables.  
 
 ### Tuning the model: Pruning
 
 As already said, our complex tree has to be pruned in order to reduce its complexity. To do so, we will use the *1 - SE rule*.   
-The idea of this rule is really general. As one would establish a t-test in statistics to see if two measures are *statistically different*, the 1 - SE rule tries to establish if two models produce statistically different results (if we can affirm that one outperforms the other).  
+The idea of this rule is really general. As one would establish a t-test in statistics to see if two measures are *statistically different*, the *1 - SE rule* tries to establish if two models produce statistically different results (if we can affirm that one outperforms the other).  
 We therefore consider the *xerror* (the criterion in which we are interested in and that we want to minimize) and its standard deviation *xstd*. A models that falls within 1 standard deviation of the most complex model can be considered as equivalent in term of performance. Therefore, using this rule, we will be able to prune the tree to get a much simplier model, without loosing in quality as the performance capability of our new model will be *statistically the same* as the first one.  
 To select the size of our pruned tree, we will look at the xerror of our original tree (the most complex one) and add one standard error *xstd*. We will then select the simplier tree with an xerror that lies within the calculated value.
 
@@ -453,25 +477,39 @@ plotcp(cart.model)
 
 
 ```{r, echo=FALSE}
-min.xstd <- cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable)] # xstd associated with lowest xerror
-min.xerror <- cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable) - 1] # lowest xerror
+# xstd associated with lowest xerror
+min.xstd <- cart.model$cptable[which.min(
+  cart.model$cptable[,ncol(cart.model$cptable) -1]),
+  ncol(cart.model$cptable)]
+
+# lowest xerror
+min.xerror <- cart.model$cptable[which.min(
+  cart.model$cptable[,ncol(cart.model$cptable) -1]),
+  ncol(cart.model$cptable) - 1]
+
 sum.xe.xstd <- min.xstd + min.xerror # sum of both
-cp.pruned <- cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),1]# CP value to which to prune the tree ; min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd)) representing the row to be pruned at
+
+# CP value to which to prune the tree ; 
+# min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd)) 
+# representing the row to be pruned at : 
+cp.pruned <- 
+  cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] 
+                                < sum.xe.xstd))), 1]
 ```
  
-Accoring to our first table, the minimal *xerror* is equal to `r cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable) - 1]` , the minimal *xstd* to `r cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable)]` and the sum of both is therefore equal to `r sum.xe.xstd`.  
+Accoring to our first table, the minimal *xerror* is equal to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable) - 1]` , the minimal *xstd* to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable)]` and the sum of both is therefore equal to `r sum.xe.xstd`.  
 
-The highest xerror below this value is equal to `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),4]` and we will therefore prune the tree at CP = `r cp.pruned`. According to our previous table, this represents `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits to be kept, equivalent to a tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  `.  
-It is also possible to observe this value on the graph where the dash line indicates the *xerror* plus its *xstd* from the most complex tree. We therefore select the less complex tree under this line, which is the size of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  ` (or, again, with `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits).  
+The smallest tree with an xerror below this value is equal to `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), ncol(cart.model$cptable) - 1]` and we will therefore prune the tree at CP = `r cp.pruned`. According to our previous table, this represents `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), 2]  ` splits to be kept, equivalent to a tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), 2] + 1  `.  
+It is also possible to observe this value on the graph where the dash line indicates the *xerror* plus its *xstd* from the most complex tree. We therefore select the less complex tree under this line, which is the tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  ` (or, again, with `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits).  
 
 We thus prune the tree at this value (the *R* function requires to indicate CP.)
 
 ```{r}
-cart.pruned <- prune(cart.model, cp=cp.pruned)
+cart.pruned <- prune(cart.model, cp = cp.pruned)
 ```
 
 ```{r, echo=FALSE}
-rpart.plot(cart.pruned, main="Pruned decision tree")
+rpart.plot(cart.pruned, main = "Pruned decision tree")
 ```
 
 We can visualize this new pruned tree that is much smaller and therefore less complex than our original one and will use it to do our predictions, to build the confusion matrix and to calculate the underlying accuracy.  
@@ -480,7 +518,9 @@ We can visualize this new pruned tree that is much smaller and therefore less co
 
 ```{r, comment=NA}
 pred.cart <- predict(cart.pruned, newdata = cred.test, type = "class")
-cart.tab <- table(Predictions = pred.cart, Observations = cred.test$response) # confusion matrix.
+
+# confusion matrix:
+cart.tab <- table(Predictions = pred.cart, Observations = cred.test$response) 
 cart.tab %>% kable(caption = "Confusion matrix for the CART model",
                    col.names = c("Predict bad", "Predict good")) %>%
   kable_styling(
@@ -490,7 +530,6 @@ cart.tab %>% kable(caption = "Confusion matrix for the CART model",
   column_spec(1, border_right = T, width = "5em") %>%
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "6em")
-
 ```
 
 Based on this table, we can calculate the accuracy using our previously build function, and that calculates the element weel classified divided by the total number of elements.  
@@ -515,108 +554,7 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 
 
 
-
-
-
-
-## Logistic regression {#Logit}
-
---> Parler de pourquoi Logistic regression (fait un bon taf quand outcome binaire)
-
-
-
-### Building the model
-
-```{r comment=NA}
-logit.model <- glm(response ~., data=cred.train, family="binomial")
-summary(logit.model)
-```
-
---> Parler du fait qu'on a des similitudes avec CART (les variables importantes avant ont aussi des coeffs signi ici... ** pas toutes... ** --> nuancer...).
---> Parler du fait qu'on a aussi plein de variables inutiles et qu'on va faire une stepwise pour minimiser AIC 
---> Dire l'idée de AIC (arbritrage entre perf du model et complexité)
---> Expliquer comment ca marche
-
-### Tuning the model: Stepwise selection according to AIC criteria
-
-
-```{r, results='hide', echo=TRUE}
-logit.step <- step(logit.model, direction="both")
-summary(logit.step)
-```
-
-
---> Parler du fait qu'on a quand meme encore énormément de variables mais que le AIC est minimisé
---> Parler du fait qu'on pourrait en virer manuellement (mais long et chiant et pas forcément utile)
-
-### Predicting the values of the testing set
-
-
-```{r}
-pred.logit.step <- ifelse(
-  predict(logit.step, newdata=cred.test, type="response") > 0.5, "good", "bad"
-  ) # the predictions of the class
-pred.logit.step.prob <- predict(logit.step, newdata=cred.test, type="response")
-
-data.frame(pred.logit.step.prob,cred.test$response) %>% 
-  ggplot(aes(x=cred.test$response, y = pred.logit.step.prob, group=cred.test$response)) + geom_boxplot() +
-        my_theme() +
-  ggtitle("Predicted probabilities against real values") +
-  xlab("Values of the testing set") +
-  ylab("Predicted probabilities of the logistic regression") 
-```
-
-```{r}
-glm.tab <-
-  table( Observations = cred.test$response, Predictions = pred.logit.step) # confusion matrix.
-glm.tab %>% kable(caption = "Confusion matrix for the Logistic regression model",
-                  col.names = c("Predict 0", "Predict 1")) %>%
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = F,
-    position = "l"
-  ) %>%
-  column_spec(1, border_right = T, width = "5em") %>%
-  column_spec(2, width = "6em") %>%
-  column_spec(3, width = "6em")
-
-accuracy(glm.tab) # accuracy
-```
-
-
-
-FALSE POSITIVE: 47 sur les 250 sont prédits 1 alors qu'ils sont 0... C'est la merde
-Idée: on peut changer la proba limite pour dire que c'est "bon" pour avoir moins de FALSE POSITIVE...
-Ca va baisser l'accuracy, mais ca va potentiellement nous faire perdre moins d'argent (on va refuser plus souvent les crédits à risques, et aussi les crédits sans risques...)
-
-
-```{r}
-pred.logit_0.7 <- ifelse(
-  predict(logit.step, newdata=cred[-index.train,], type="response") > 0.75, "good", "bad"
-  ) # the predictions of the class
-```
-
-```{r}
-glm.tab <-
-  table(Observations = cred.test$response, Predictions = pred.logit_0.7) # confusion matrix.
-glm.tab %>% kable(caption = "Confusion matrix for the adapted Logistic regression model",
-                  col.names = c("Predict bad", "Predict good")) %>%
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = F,
-    position = "l"
-  ) %>%
-  column_spec(1, border_right = T, width = "5em") %>%
-  column_spec(2, width = "6em") %>%
-  column_spec(3, width = "6em")
-
-sum(diag(glm.tab))/sum(glm.tab) # accuracy
-```
-
---> En passant la limite à 0.75, on a gardé une bonne accuracy, et on fait moins d'erreurs d'évaluation parmis les "risky". Faut voir se que la banque peut se permettre comme marge et si les risky conduisent forcément à des pertes...
-
-
-## Neural Network 
+## Neural Network {#NN}
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
 
@@ -638,7 +576,8 @@ cred.train1 <- cred[index.train1,]
 cred.test1 <- cred[-index.train1,]
 nnet.model = list()
 for (i in 11:30) {
-  nnet.model[[i]] = nnet(cred.train$response~., data = cred.train, size=i, maxit=200, decay = 1)
+  nnet.model[[i]] = nnet(cred.train$response~., 
+                         data = cred.train, size=i, maxit=200, decay = 1)
 }
 pred.nnet=list()
 for (i in 11:30){
@@ -647,7 +586,8 @@ for (i in 11:30){
 }# making the predictions
   tab.nnet=list()
 for (i in 11:30){
-  tab.nnet[[i]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet[i]))
+  tab.nnet[[i]] <- table(Reality=cred.test$response, 
+                         Predicted=unlist(pred.nnet[i]))
 }
   acc.nnet = list()
 for (i in 11:30) {
@@ -674,7 +614,8 @@ accu <- data.frame(Average=mean.acc.nnet.cv[-c(1:10)], Neurones = c(11:30))
 The 
 
 ```{r, comment=NA}
-which.max(mean.acc.nnet.cv) # neurones leading to the model with the highest accuracy
+# number of neurones leading to the model with the highest accuracy
+which.max(mean.acc.nnet.cv) 
 mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] # the accuracy
 ```
 
@@ -688,8 +629,10 @@ accu %>% ggplot() +
                'red') +
   scale_x_continuous(breaks = c(11:30)) + scale_y_continuous(breaks = round(c(
     seq(min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]), max(mean.acc.nnet.cv),
-    by = (max(mean.acc.nnet.cv) - min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]))/4
-  )),3)) + ylab("Average accuracy") + ggtitle("Average accuracy according to the number of neurones in our network") + my_theme()
+        by = (max(mean.acc.nnet.cv) - min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]))/4
+    )), 3)) + ylab("Average accuracy") + 
+  ggtitle("Average accuracy according to the number of neurones in our network") +
+  my_theme()
 ```
 
 We can directly see which that the model with `r which.max(mean.acc.nnet.cv)` neurones presents the highest accuracy.
@@ -703,25 +646,29 @@ We can therefore continue to explore further the model with `r which.max(mean.ac
 Note, on a considéré plus de decay, mais pour plus de "computational efficicency", on va en display seulement certains...
 
 ```{r, cache = TRUE, results='hide'}
-acc.nnet.cv2 <- matrix(nrow=length(seq(2^-8,2,2^-3)),ncol=10) # we considered initially extreme small values like seq(0,2^-5,2^-8), seq(0,2^-4,2^-10) intermediate and high and the range that we propose here best fits the data.
+acc.nnet.cv2 <- matrix(nrow=length(seq(2^-8,2,2^-3)), ncol=10) # we considered initially extreme small values like seq(0,2^-5,2^-8), seq(0,2^-4,2^-10) intermediate and high and the range that we propose here best fits the data.
 j <- 1
 for (j in 1:10){
-index.train2 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
-cred.train2 <- cred[index.train2,]
-cred.test2 <- cred[-index.train2,]
-nnet.model2 = list()
-pred.nnet2=list()
-tab.nnet2=list()
-acc.nnet2 = list()
-k <- 1
-for (i in seq(2^-8,2,2^-3)) {
-  nnet.model2[[k]] = nnet(cred.train$response~., data = cred.train, size=which.max(mean.acc.nnet.cv), maxit=200, decay = i)
-pred.nnet2[[k]] <- predict(nnet.model2[k], cred.test, type="class") #  making the predictions
-tab.nnet2[[k]] <- table(Reality=cred.test$response, Predicted=unlist(pred.nnet2[k]))
-acc.nnet2[[k]] <- sum(ifelse(cred.test$response == unlist(pred.nnet2[k]), 1, 0), na.rm = TRUE) /
-    length(cred.test$response)
-  acc.nnet.cv2[k,j] <- acc.nnet2[[k]]
-  k <- k+1
+  index.train2 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
+  cred.train2 <- cred[index.train2,]
+  cred.test2 <- cred[-index.train2,]
+  nnet.model2 = list()
+  pred.nnet2=list()
+  tab.nnet2=list()
+  acc.nnet2 = list()
+  k <- 1
+  for (i in seq(2^-8,2,2^-3)) {
+    nnet.model2[[k]] = nnet(cred.train$response~., 
+                            data = cred.train, size=which.max(mean.acc.nnet.cv), 
+                            maxit=200, decay = i)
+    pred.nnet2[[k]] <- predict(nnet.model2[k], cred.test, type="class") #  making the predictions
+    tab.nnet2[[k]] <- table(Reality=cred.test$response, 
+                            Predicted=unlist(pred.nnet2[k]))
+    acc.nnet2[[k]] <- sum(ifelse(cred.test$response 
+                                 == unlist(pred.nnet2[k]), 1, 0), na.rm = TRUE) / 
+      length(cred.test$response)
+    acc.nnet.cv2[k,j] <- acc.nnet2[[k]]
+    k <- k+1
   } 
   j <- j+1
 }
@@ -751,24 +698,35 @@ As usual, we trained the model and predict the values of the test set to be able
 
 ```{r, results='hide'}
 
-nnet.model.retained <- nnet(cred.train$response ~ .,data = cred.train,maxit = 200,size = which.max(mean.acc.nnet.cv), decay = round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1))
+nnet.model.retained <- 
+  nnet(cred.train$response ~ .,
+       data = cred.train,maxit = 200,
+       size = which.max(mean.acc.nnet.cv), 
+       decay = round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1))
 
-pred.nnet.retained <- predict(nnet.model.retained, cred.test, type="class") # predictions on the test set
+# Predictions on the test set:
+pred.nnet.retained <- predict(nnet.model.retained, cred.test, type="class") 
 
-
-tab.nnet.retained <- table(Reality = cred.test$response, Predicted = unlist(pred.nnet.retained)) # confusion matrix
-
-acc.nnet.retained <- sum(ifelse(cred.test$response == unlist(pred.nnet.retained), 1, 0), na.rm = TRUE) /
-  length(cred.test$response) # accuracy
+# Confusion matrix
+tab.nnet.retained <- table(Reality = cred.test$response, 
+                           Predicted = unlist(pred.nnet.retained)) 
+# Accuracy
+acc.nnet.retained <- sum(ifelse(
+  cred.test$response == unlist(pred.nnet.retained), 1, 0), na.rm = TRUE) /
+  length(cred.test$response) 
 ```
 
 In addition, we can plot our neural network:
 
 ```{r, comment = NA, fig.width=10, fig.height=10, echo=FALSE}
-
 # plot
-plotnet(nnet.model.retained, alpha_val=0.1,
-        circle_col="steelblue1", pos_col="blue", neg_col="red", bord_col="black", pad_x=0.8)
+plotnet(nnet.model.retained, 
+        alpha_val=0.1,
+        circle_col="steelblue1", 
+        pos_col="blue", 
+        neg_col="red", 
+        bord_col="black", 
+        pad_x=0.8)
 ```
 
 This graph shows that our model can be quite complex, there a plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
@@ -776,8 +734,9 @@ This graph shows that our model can be quite complex, there a plenty of arrows. 
 
 ```{r, echo=FALSE}
 # confusion matrix
-tab.nnet.retained %>% kable(caption = "Confusion matrix of the fitted NNET model",
-                                          col.names = c("Predict good", "Predict bad")) %>%
+tab.nnet.retained %>% kable(
+  caption = "Confusion matrix of the fitted NNET model",
+  col.names = c("Predict good", "Predict bad")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
@@ -816,16 +775,18 @@ We obtain a final accuracy of `r round(acc.nnet.retained,3) ` on our testing set
 ### Predicting the values of the testing set
 
 
-## Model x (K-nn)
+## K - Nearest Neighbors {#KNN}
 
 ### Building the model
 
 ```{r}
-scaled.cred <- scale(cred[,-length(cred)]) %>% data.frame(response=cred$response)
-# scaling except last row (except response)
+# scaling except last row (except the response variable)
+scaled.cred <- scale(cred[,-length(cred)]) %>% 
+  data.frame(response=cred$response)
 
 scaled.cred.train <- scale(cred.train[,-length(cred.train)]) %>% data.frame(response=cred.train$response)
-scaled.cred.test <- scale(cred.test[,-length(cred.test)]) %>% data.frame(response=cred.test$response)
+scaled.cred.test <- scale(cred.test[,-length(cred.test)]) %>% 
+  data.frame(response=cred.test$response)
 ```
 
 ```{r}
@@ -834,7 +795,11 @@ knn.model = list()
 k <- 0
 for (j in 2:3) {
   for (i in 1:20) {
-    knn.model[[20 * k + i]] <- kknn(response ~ ., k=i, distance=j,train=scaled.cred.train, test=scaled.cred.test)
+    knn.model[[20 * k + i]] <- kknn(response ~ ., 
+                                    k = i, 
+                                    distance = j, 
+                                    train = scaled.cred.train, 
+                                    test=scaled.cred.test)
   }
   k <- k+1
 }
@@ -842,7 +807,8 @@ for (j in 2:3) {
 # making the predictions on the testing set
 pred.knn=list()
 for (i in 1:length(knn.model)){
-  pred.knn[[i]] = table(Prediction=knn.model[[i]]$fitted.value, Actual=cred.test$response)
+  pred.knn[[i]] = table(Prediction=knn.model[[i]]$fitted.value, 
+                        Actual=cred.test$response)
 }
 
 # calculating the accuracy
@@ -854,19 +820,23 @@ for (i in 1:length(knn.model)) {
 
 ```{r, comment=NA, echo=FALSE}
 selected.knn <- knn.model[[which.max(acc.knn)]] # selected knn
-paste("The selected knn model uses a distance of", selected.knn$distance) %>% paste("and is computed with the", ifelse(which.max(acc.knn)<20,which.max(acc.knn),which.max(acc.knn)-20)) %>% paste("neerest neighbors.") %>%
-paste("The obtained accuracy is equal to", acc.knn[[which.max(acc.knn)]]) 
+paste("The selected knn model uses a distance of", selected.knn$distance) %>% 
+  paste("and is computed with the", ifelse(which.max(acc.knn) < 20,
+                                           which.max(acc.knn), 
+                                           which.max(acc.knn) - 20)) %>% 
+  paste("neerest neighbors.") %>%
+  paste("The obtained accuracy is equal to", 
+        acc.knn[[which.max(acc.knn)]]) 
 
 # confusion matrix
-pred.knn[which.max(acc.knn)] %>% kable(caption = "Confusion matrix of the fitted KNN model",
-                                          col.names = c("Predict good", "Predict bad")) %>%
+pred.knn[which.max(acc.knn)] %>% 
+  kable(caption = "Confusion matrix of the fitted KNN model",
+        col.names = c("Predict good", "Predict bad")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
     position = "l"
   ) 
-
-
 ```
 
 
@@ -930,13 +900,15 @@ for (i in 1:10){
 For example, *test.list[[1]]* is a data set of 300 rows taken at random from our data.
 
 ```{r} 
-# test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>% 
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+# test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+#                 full_width = F) %>%
 #   scroll_box(width = "100%", height = "200px")
 # 
 # 
-# train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>% 
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+# train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+#                 full_width = F) %>%
 #   scroll_box(width = "100%", height = "200px")
 ```
 
@@ -948,13 +920,27 @@ For example, *test.list[[1]]* is a data set of 300 rows taken at random from our
 acc.cart.cv <- numeric(10)
 for (i in 1:10){
   cart.cv <- rpart(response~., data=train.list[[i]]) # original tree
-  cp.pruned <- cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable)] + cart.model$cptable[nrow(cart.model$cptable), ncol(cart.model$cptable) - 1]))),1] # to prune at
-  cart.pruned.cv <- prune(cart.model, cp=cp.pruned) # the pruned tree for predictions
-  cart.pred.cv <- predict(cart.pruned.cv, newdata=test.list[[i]], type="class") # making the predictions
-  tab.cart.cv <- table(test.list[[i]]$response, cart.pred.cv) # the confusion matrix
-  acc.cart.cv[i] <- accuracy(tab.cart.cv) # the final accuracy
+  
+  # Tree to be prune at: 
+  cp.pruned <- cart.model$cptable[(
+    min(which(cart.model$cptable[, ncol(cart.model$cptable) - 1] < 
+                cart.model$cptable[nrow(cart.model$cptable), 
+                                   ncol(cart.model$cptable)] + 
+                cart.model$cptable[nrow(cart.model$cptable), 
+                                   ncol(cart.model$cptable) - 1]))), 1] 
+  
+  # the pruned tree for predictions
+  cart.pruned.cv <- prune(cart.model, cp = cp.pruned) 
+  
+  # making the predictions
+  cart.pred.cv <- predict(cart.pruned.cv, newdata=test.list[[i]], type="class") 
+  
+  # the confusion matrix
+  tab.cart.cv <- table(test.list[[i]]$response, cart.pred.cv) 
+  
+  # the final accuracy
+  acc.cart.cv[i] <- accuracy(tab.cart.cv) 
 }
-
 ```
 
 ## Logistic Regression
@@ -962,13 +948,25 @@ for (i in 1:10){
 ```{r, cache = TRUE, results='hide'}
 acc.glm.cv <- numeric(10)
 for (i in 1:10){
-  glm.cv <- glm(response ~., data=train.list[[i]], family="binomial") # original logistic regression
-  logit.step.cv <- step(glm.cv, direction="both") # the pruned tree for predictions 
+  # original logistic regression
+  glm.cv <- glm(response ~., 
+                data=train.list[[i]], 
+                family="binomial") 
+  
+   # the tuned (stepwise) logistic regression 
+  logit.step.cv <- step(glm.cv, direction="both")
+  
+  # The predictions on the test set i based on the stepwise regression
   glm.pred.cv <- ifelse(
-  predict(logit.step.cv, newdata=test.list[[i]], type="response") > 0.5, "good", "bad"
-  ) # making the predictions
-  tab.glm.cv <- table(test.list[[i]]$response, glm.pred.cv) # the confusion matrix
-  acc.glm.cv[i] <- accuracy(tab.glm.cv) # the final accuracy
+  predict(logit.step.cv, newdata=test.list[[i]], type="response") > 0.5, 
+  "good", "bad"
+  ) 
+  
+  # the confusion matrix
+  tab.glm.cv <- table(test.list[[i]]$response, glm.pred.cv) 
+  
+  # The final accuracy
+  acc.glm.cv[i] <- accuracy(tab.glm.cv) 
 }
 
 ```
