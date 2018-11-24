@@ -553,7 +553,6 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 --> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE
 
 
-
 ## Neural Network {#NN}
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
@@ -565,144 +564,35 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 
 --> On essaye de trouver le nombre "optimal" de neurones. Vu que neural network utilise des valeurs aléatoires au début pour lancer l'algo etc. Ca varie. On calcule donc 10 fois l'accuracy liée à chaque nombre de neurones et voir si y'a un nb de neurones optimal.
 
-**UTILISER A CHAQUE ITERATION DES TRAIN ET DES TESTS SETS DIFFERENTS** !
-
-```{r, cache=TRUE, results='hide'}
-
-acc.nnet.cv <- matrix(nrow=30,ncol=10) 
-for (j in 1:10){
-index.train1 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
-cred.train1 <- cred[index.train1,]
-cred.test1 <- cred[-index.train1,]
-nnet.model = list()
-for (i in 11:30) {
-  nnet.model[[i]] = nnet(cred.train$response~., 
-                         data = cred.train, size=i, maxit=200, decay = 1)
-}
-pred.nnet=list()
-for (i in 11:30){
-  pred.nnet[i] <- predict(nnet.model[i], cred.test, type="class")
-  
-}# making the predictions
-  tab.nnet=list()
-for (i in 11:30){
-  tab.nnet[[i]] <- table(Reality=cred.test$response, 
-                         Predicted=unlist(pred.nnet[i]))
-}
-  acc.nnet = list()
-for (i in 11:30) {
-  acc.nnet[i] <-
-    sum(ifelse(cred.test$response == unlist(pred.nnet[i]), 1, 0), na.rm = TRUE) /
-    length(cred.test$response)
-
-  acc.nnet.cv[i,j] <- acc.nnet[[i]]} 
-}
-
-```
-
-On utilise à chaque itération des train et test sets différents.
-
-```{r}
-mean.acc.nnet.cv <- numeric(30)
-sd.acc.nnet.cv <- numeric(30)
-for(i in 11:30){mean.acc.nnet.cv[i] <- mean(acc.nnet.cv[i,])
-sd.acc.nnet.cv[i] <- sd(acc.nnet.cv[i,])}
-mean.acc.nnet.cv[-c(1:10)] # average mean for the models with i = 11,..,30 nodes
-accu <- data.frame(Average=mean.acc.nnet.cv[-c(1:10)], Neurones = c(11:30))
-```
-
-The 
-
-```{r, comment=NA}
-# number of neurones leading to the model with the highest accuracy
-which.max(mean.acc.nnet.cv) 
-mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)] # the accuracy
-```
-
-The maximum accuracy  is equal to `r mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)]`.  
-On the following plot, we can see at a glance the accuracies and the model that we are going to select.
-
-```{r, echo=FALSE}
-accu %>% ggplot() +
-  geom_point(aes(x = Neurones, y = Average)) +
-  geom_hline(yintercept = mean.acc.nnet.cv[which.max(mean.acc.nnet.cv)], col =
-               'red') +
-  scale_x_continuous(breaks = c(11:30)) + scale_y_continuous(breaks = round(c(
-    seq(min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]), max(mean.acc.nnet.cv),
-        by = (max(mean.acc.nnet.cv) - min(mean.acc.nnet.cv[mean.acc.nnet.cv != 0]))/4
-    )), 3)) + ylab("Average accuracy") + 
-  ggtitle("Average accuracy according to the number of neurones in our network") +
-  my_theme()
-```
-
-We can directly see which that the model with `r which.max(mean.acc.nnet.cv)` neurones presents the highest accuracy.
-
-Obviously, this choice is subject to discussion and other methods could be preferred. At the end, the differences resulting from the use of our different models are really low, meaning that they have all quite similar predictive capabilities. 
-
-We can therefore continue to explore further the model with `r which.max(mean.acc.nnet.cv)` neurones that we retained. 
-
-#### TESTING DIFFERENT DECAYS
-
-Note, on a considéré plus de decay, mais pour plus de "computational efficicency", on va en display seulement certains...
-
-```{r, cache = TRUE, results='hide'}
-acc.nnet.cv2 <- matrix(nrow=length(seq(2^-8,2,2^-3)), ncol=10) # we considered initially extreme small values like seq(0,2^-5,2^-8), seq(0,2^-4,2^-10) intermediate and high and the range that we propose here best fits the data.
-j <- 1
-for (j in 1:10){
-  index.train2 <- sample(1:nrow(cred), size=nrow(cred)*0.7, replace=FALSE)
-  cred.train2 <- cred[index.train2,]
-  cred.test2 <- cred[-index.train2,]
-  nnet.model2 = list()
-  pred.nnet2=list()
-  tab.nnet2=list()
-  acc.nnet2 = list()
-  k <- 1
-  for (i in seq(2^-8,2,2^-3)) {
-    nnet.model2[[k]] = nnet(cred.train$response~., 
-                            data = cred.train, size=which.max(mean.acc.nnet.cv), 
-                            maxit=200, decay = i)
-    pred.nnet2[[k]] <- predict(nnet.model2[k], cred.test, type="class") #  making the predictions
-    tab.nnet2[[k]] <- table(Reality=cred.test$response, 
-                            Predicted=unlist(pred.nnet2[k]))
-    acc.nnet2[[k]] <- sum(ifelse(cred.test$response 
-                                 == unlist(pred.nnet2[k]), 1, 0), na.rm = TRUE) / 
-      length(cred.test$response)
-    acc.nnet.cv2[k,j] <- acc.nnet2[[k]]
-    k <- k+1
-  } 
-  j <- j+1
-}
-```
 
 
-```{r}
-mean.acc.nnet.cv2 <- numeric(16)
-sd.acc.nnet.cv2 <- numeric(16)
-for(i in 1:16){mean.acc.nnet.cv2[i] <- mean(acc.nnet.cv2[i,])
-sd.acc.nnet.cv2[i] <- sd(acc.nnet.cv2[i,])}
-mean.acc.nnet.cv2 # average mean for the models with i = 11,..,30 nodes
-accu2 <- data.frame(Average=mean.acc.nnet.cv2, Decay = seq(2^-8,2,2^-3))
-```
+```{r, results="hide"}
+train_control <- trainControl(method = "cv", number = 5)
 
+nnet_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = expand.grid(size = 14:25, decay = c(1.0, 1.5, 2)),
+                 method = "nnet")
 
-```{r, comment=NA}
-which.max(mean.acc.nnet.cv2) # neurones leading to the model with the highest accuracy
-mean.acc.nnet.cv2[which.max(mean.acc.nnet.cv2)] # the accuracy
-round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1) # the retained decay
+plot(nnet_fit)
+nnet_fit$results
+nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size # the size maximizing the accuracy
+nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay # the decay maximizing the accuracy
 ```
 
 ### Model selection and predicting the values of the testing set
 
-We present you the characteristics of the model retained, with `r which.max(mean.acc.nnet.cv)` neurones in the hidden layer and a decay of `r round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1)`.
+We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay`.
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
 
 ```{r, results='hide'}
 
 nnet.model.retained <- 
   nnet(cred.train$response ~ .,
-       data = cred.train,maxit = 200,
-       size = which.max(mean.acc.nnet.cv), 
-       decay = round(seq(2^-8,2,2^-3)[which.max(mean.acc.nnet.cv2)],1))
+       data = cred.train, maxit = 200,
+       size = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size, 
+       decay = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay)
 
 # Predictions on the test set:
 pred.nnet.retained <- predict(nnet.model.retained, cred.test, type="class") 
@@ -721,12 +611,12 @@ In addition, we can plot our neural network:
 ```{r, comment = NA, fig.width=10, fig.height=10, echo=FALSE}
 # plot
 plotnet(nnet.model.retained, 
-        alpha_val=0.1,
-        circle_col="steelblue1", 
-        pos_col="blue", 
-        neg_col="red", 
-        bord_col="black", 
-        pad_x=0.8)
+        alpha_val = 0.1,
+        circle_col = "steelblue1", 
+        pos_col = "blue", 
+        neg_col = "red", 
+        bord_col = "black", 
+        pad_x = 0.8)
 ```
 
 This graph shows that our model can be quite complex, there a plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
@@ -747,19 +637,8 @@ tab.nnet.retained %>% kable(
   column_spec(3, width = "6em")
 ```
 
-We obtain a final accuracy of `r round(acc.nnet.retained,3) ` on our testing set.
-
-
-
-
-
-
-
-
-
-
-
-
+We obtain a final accuracy of `r round(acc.nnet.retained,3)` on our testing set. 
+Note that this accuracy is different from the one using the cross validation before as here, we use only one test set that may be disproportioned. We will, at the end, use again a cross validation for all models on the same train and test sets in order to compare the different models.  
 
 
 
@@ -777,80 +656,76 @@ We obtain a final accuracy of `r round(acc.nnet.retained,3) ` on our testing set
 
 ## K - Nearest Neighbors {#KNN}
 
-### Building the model
+### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
 
 ```{r}
-# scaling except last row (except the response variable)
-scaled.cred <- scale(cred[,-length(cred)]) %>% 
-  data.frame(response=cred$response)
-
-scaled.cred.train <- scale(cred.train[,-length(cred.train)]) %>% data.frame(response=cred.train$response)
-scaled.cred.test <- scale(cred.test[,-length(cred.test)]) %>% 
-  data.frame(response=cred.test$response)
+# kknn_parameters <- expand.grid(k = 2:30, distance = 1:5, kernel= "optimal")
+# 
+# kknn_fit <- train(form = response~ .,
+#                  data = cred,
+#                  trControl = train_control,
+#                  tuneGrid = knn_parameters,
+#                  method = "kknn",
+#                  preProcess = c("center", "scale"))
+# plot(kknn_fit)
+# kknn_fit$results
+# 
+# kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
+# kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
 ```
+
+After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above.) 
+
+We can thus use the *knn* function to see how the accuracy varies with different k between 2 an 30 and select the number of neighbors that lead to the highest accuracy. 
 
 ```{r}
-# Creation of 20 KNN: 10 with i={1,..,10} and k = 2 and 10 with i={1,..,10} and k = 3 
-knn.model = list()
-k <- 0
-for (j in 2:3) {
-  for (i in 1:20) {
-    knn.model[[20 * k + i]] <- kknn(response ~ ., 
-                                    k = i, 
-                                    distance = j, 
-                                    train = scaled.cred.train, 
-                                    test=scaled.cred.test)
-  }
-  k <- k+1
-}
+knn_parameters <- expand.grid(k = 2:30)
 
-# making the predictions on the testing set
-pred.knn=list()
-for (i in 1:length(knn.model)){
-  pred.knn[[i]] = table(Prediction=knn.model[[i]]$fitted.value, 
-                        Actual=cred.test$response)
-}
+knn_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = knn_parameters,
+                 method = "knn",
+                 preProcess = c("center", "scale"))
+plot(knn_fit)
+knn_fit$results
 
-# calculating the accuracy
-acc.knn = list()
-for (i in 1:length(knn.model)) {
-  acc.knn[i] <- sum(diag(pred.knn[[i]]))/250
-}
+knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
 ```
 
-```{r, comment=NA, echo=FALSE}
-selected.knn <- knn.model[[which.max(acc.knn)]] # selected knn
-paste("The selected knn model uses a distance of", selected.knn$distance) %>% 
-  paste("and is computed with the", ifelse(which.max(acc.knn) < 20,
-                                           which.max(acc.knn), 
-                                           which.max(acc.knn) - 20)) %>% 
-  paste("neerest neighbors.") %>%
-  paste("The obtained accuracy is equal to", 
-        acc.knn[[which.max(acc.knn)]]) 
-
-# confusion matrix
-pred.knn[which.max(acc.knn)] %>% 
-  kable(caption = "Confusion matrix of the fitted KNN model",
-        col.names = c("Predict good", "Predict bad")) %>%
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = F,
-    position = "l"
-  ) 
-```
-
-
-
-Petit DB donc pas un pb que "lazy learner"
-
-
-
-
-### Optimizing the model: selecting the number of nodes and layers
+The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` neerest neighbors. The obtained accuracy using a 10 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
 
 ### Predicting the values of the testing set
 
-Apres y'en a marre...
+```{r, comment=NA, echo=FALSE}
+pred.knn <- predict(knn_fit, newdata = cred.test)
+
+# confusion matrix
+knn.tab <- table(Predictions = pred.knn, Observations = cred.test$response) 
+cart.tab %>% kable(caption = "Confusion matrix for the K-NN model",
+                   col.names = c("Predict bad", "Predict good")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l") %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+
+```
+
+Given our confusion matrix, on our initial testing set, the obtained accuracy is equal to `r accuracy(knn.tab)`. 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -943,44 +818,42 @@ for (i in 1:10){
 }
 ```
 
-## Logistic Regression
-
-```{r, cache = TRUE, results='hide'}
-acc.glm.cv <- numeric(10)
-for (i in 1:10){
-  # original logistic regression
-  glm.cv <- glm(response ~., 
-                data=train.list[[i]], 
-                family="binomial") 
-  
-   # the tuned (stepwise) logistic regression 
-  logit.step.cv <- step(glm.cv, direction="both")
-  
-  # The predictions on the test set i based on the stepwise regression
-  glm.pred.cv <- ifelse(
-  predict(logit.step.cv, newdata=test.list[[i]], type="response") > 0.5, 
-  "good", "bad"
-  ) 
-  
-  # the confusion matrix
-  tab.glm.cv <- table(test.list[[i]]$response, glm.pred.cv) 
-  
-  # The final accuracy
-  acc.glm.cv[i] <- accuracy(tab.glm.cv) 
-}
-
-```
-
 
 
 ```{r}
 acc.cart.cv
 mean(acc.cart.cv)
 sd(acc.cart.cv)
-
-acc.glm.cv # the vector of accuracies for the glm model
-mean(acc.glm.cv) # the average accuracy
-sd(acc.glm.cv) # the standard deviation of the accuracy
 ```
 
+
+
+```{r}
+# train_control <- trainControl(method = "cv", number = 10)
+# 
+# knn_parameters <- data.frame (k = 3:30)
+# 
+# knn_fit <- train(form = response~ .,
+#                  data = cred,
+#                  trControl = train_control,
+#                  tuneGrid = knn_parameters,
+#                  method = "knn",
+#                  preProcess = c("center", "scale"))
+# plot(knn_fit)
+# knn_fit$results
+```
+
+```{r, eval= FALSE}
+train_control <- trainControl(method = "cv", number = 10)
+
+nnet_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = expand.grid(size = 10:20, decay = 1:5),
+                 method = "nnet")
+
+plot(nnet_fit)
+nnet_fit
+nnet_fit$results
+```
 
