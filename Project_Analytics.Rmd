@@ -11,6 +11,8 @@ output: html_document
     - [CART](#CART)
     - [Logistic Regression](#Logit)
     - [Neural Network](#NN)
+    - [Support Vector Machine](#SVM)
+    - [Random Forest](#RF)
     - [K-Nearest Neighbors](#KNN)
     - [....]()
  - [Cross Validation Approach](#CV)
@@ -45,6 +47,7 @@ library(rpart)
 library(rpart.plot)
 library(maptree)
 library(caret)
+library(e1071)
 library(gmodels)
 library(MASS)
 library(nnet)
@@ -211,12 +214,12 @@ attach(cred)
 ```
 
 ```{r, echo=FALSE}
-table(age>=100) %>% kable(caption="Number of instances with age > 100") %>%
+table(age >= 100) %>% kable(caption = "Number of instances with age > 100") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
                 full_width = F, position = "float_left") %>%
   column_spec(1, width = "5em", border_right = T) %>%
   column_spec(2, width = "5em")
-which(age>100) %>% kable(caption="Position of instance with age > 100") %>% 
+which(age > 100) %>% kable(caption="Position of instance with age > 100") %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
                 full_width = F, position = "left") %>%
   column_spec(1, width = "9.5em") 
@@ -286,7 +289,7 @@ edu %>% kable(caption = "Frequency table of education", align = 'c') %>%
 It is indeed more appropriate to replace our value by 0 as the probability of belonging to this class is close to 20 times bigger.  
 
 ```{r}
-cred$education[which(education==-1)] <- 0
+cred$education[which(education == -1)] <- 0
 ```
 
 &nbsp;  
@@ -319,7 +322,7 @@ ggplot(cred, aes(x = cred$guarantor)) +
 Again, for the same reasons, it is preferable to replace the wrong recorded data by 0.  
 
 ```{r}
-cred$guarantor[which(guarantor==2)] <- 0
+cred$guarantor[which(guarantor == 2)] <- 0
 ```
 
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
@@ -337,7 +340,7 @@ As our final goal is to predict if a customer should be classified as a risky on
 Let's first have a look at its distribution:  
 
 ```{r, echo=FALSE}
-cred$response <- as.factor(ifelse(cred$response==1, "good", "bad")) 
+cred$response <- as.factor(ifelse(cred$response == 1, "good", "bad")) 
 ggplot(cred, aes(x = cred$response)) + 
   geom_bar(stat = "count", position = "dodge") +
   ggtitle(str_c("Barplot of the response variable")) +
@@ -399,6 +402,7 @@ for(i in 1:(length(cred) - 1)){
 # Modelling {#Mod}
 
 Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model.  
+We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
 In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
 A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
@@ -439,7 +443,7 @@ cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
 ```
 
 ```{r}
-rpart.plot(cart.model, main="Original decision tree")
+rpart.plot(cart.model, main = "Original decision tree")
 ```
 
 --> At this time, we have obtained a decision tree that can be used to do the predictions. At it node, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
@@ -548,9 +552,9 @@ CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
 We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good. 
 
 
---> Parler de accuracy en elle meme (0.74 pas top par rapport aux 0.7 de base si on prédit que "good")
+--> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")
 --> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
---> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE
+--> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (OU A LA FIN)
 
 
 ## Neural Network {#NN}
@@ -562,7 +566,7 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 
 "Over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight **decay.**"
 
---> On essaye de trouver le nombre "optimal" de neurones. Vu que neural network utilise des valeurs aléatoires au début pour lancer l'algo etc. Ca varie. On calcule donc 10 fois l'accuracy liée à chaque nombre de neurones et voir si y'a un nb de neurones optimal.
+--> On essaye de trouver le nombre "optimal" de neurones. Vu que neural network utilise des valeurs aléatoires au début pour lancer l'algo etc. Ca varie. On calcule donc 5 fois l'accuracy liée à chaque nombre de neurones et voir si y'a un nb de neurones optimal.
 
 
 
@@ -587,7 +591,6 @@ We present you the characteristics of the model retained, with `r nnet_fit$resul
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
 
 ```{r, results='hide'}
-
 nnet.model.retained <- 
   nnet(cred.train$response ~ .,
        data = cred.train, maxit = 200,
@@ -641,22 +644,113 @@ We obtain a final accuracy of `r round(acc.nnet.retained,3)` on our testing set.
 Note that this accuracy is different from the one using the cross validation before as here, we use only one test set that may be disproportioned. We will, at the end, use again a cross validation for all models on the same train and test sets in order to compare the different models.  
 
 
+## Support Vector Machine {#SVM}
 
-
-
-
-## Support Vector Machine (SVM)
+Another important model that we will now consider and compare to the other ones will be the Support Vector Machines.  
+This models aims at... **DESCRIPTION**
 
 ### Building the model
 
-### Optimizing the model: selecting good cost and gamma parameters
+Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
+
+```{r}
+svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) 
+# note that we first tested a wider scope of values (from 0 to 1000)
+# and now present only the interval that leads to the best results
+
+svm_fit <- train(form = response ~ .,
+                   data = cred,
+                   method = "svmRadialCost",
+                   tuneGrid = svm_parameters,
+                   preProcess = "range",
+                   trace = FALSE,
+                   trControl = train_control)
+```
+
+### Optimizing the model: selecting good cost parameter
+
+Now that our different SVM models with different cost parameters have been built, we have to select the cost parameter that leads to the highest accuracy.
+
+```{r}
+plot(svm_fit)
+
+svm_fit$results
+svm_fit$results[which.max(svm_fit$results$Accuracy),]$C # the cost maximizing the accuracy
+```
+
+
+According to our results and by having tested different costs, we conclude that we should opt for a cost of `r svm_fit$results[which.max(svm_fit$results$Accuracy),]$C` which leads to the highest accuracy.  
+
+
+
+We can then "extract" this model and analyze it on his own. We have to note that, as the Neural Network, SVM doesn't allow for much interpretations. What matters here is the quality of the predictions more than the individual interpretability of the different variables.  
+In addition, to have a 2D graph, one should fix (slice) all other variables. Here, having 30 explanative variables, it does not make sense to fix 28 out of them and plotting is therefore not appropriate.  
+
+However, we can look at the predictions of the model.
 
 ### Predicting the values of the testing set
+
+```{r}
+svm.model.retained <- 
+  svm(cred.train$response ~ .,
+       data = cred.train, 
+       cost = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C)
+
+# Predictions on the test set:
+pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") 
+
+# Confusion matrix
+tab.svm.retained <- table(Reality = cred.test$response, 
+                           Predicted = unlist(pred.svm.retained)) 
+# Accuracy
+acc.svm.retained <- accuracy(tab.nnet.retained)
+```
+
+We can build the confusion matrix and see how the models performs.
+
+```{r}
+tab.svm.retained %>% kable(
+  caption = "Confusion matrix of the fitted SVM model",
+  col.names = c("Predict good", "Predict bad")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+```
+
+With this model we obtain a final accuracy of `r acc.svm.retained` on the original testing set that we built at the beginning (without CV).  
+Again, we will compare this model with the others in a final step using a cross validation procedure performed on the same training sets and testing sets at the end of our analysis. 
+
+## Random Forest {#RF}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## K - Nearest Neighbors {#KNN}
 
 ### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
+
+The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency.  
+However, we ran it one to be able to evaluate which distance measure to select.  
 
 ```{r}
 # kknn_parameters <- expand.grid(k = 2:30, distance = 1:5, kernel= "optimal")
@@ -693,7 +787,7 @@ knn_fit$results
 knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
 ```
 
-The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` neerest neighbors. The obtained accuracy using a 10 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
+The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` neerest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
 
 ### Predicting the values of the testing set
 
@@ -711,7 +805,6 @@ cart.tab %>% kable(caption = "Confusion matrix for the K-NN model",
   column_spec(1, border_right = T, width = "5em") %>%
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "6em")
-
 ```
 
 Given our confusion matrix, on our initial testing set, the obtained accuracy is equal to `r accuracy(knn.tab)`. 
