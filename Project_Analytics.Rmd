@@ -483,7 +483,7 @@ plotcp(cart.model)
 ```
 
 
-```{r, echo=FALSE}
+```{r, echo = FALSE}
 # xstd associated with lowest xerror
 min.xstd <- cart.model$cptable[which.min(
   cart.model$cptable[,ncol(cart.model$cptable) -1]),
@@ -778,7 +778,8 @@ rf.model.retained <-
   randomForest(formula = response ~ .,
                data = cred.train, 
                ntree = 500, 
-               mtry = rf_fit$results[which.max(svm_fit$results$Accuracy),]$mtry, 
+               tuneGrid = data.frame(
+                 mtry = rf_fit$results[which.max(svm_fit$results$Accuracy),]$mtry),
                importance = TRUE)
 ```
 
@@ -854,9 +855,9 @@ The following code will not be run each time we execute our evaluation of the di
 However, we ran it one to be able to evaluate which distance measure to select.  
 
 ```{r, eval = FALSE}
-kknn_parameters <- expand.grid(k = 2:30, distance = 1:5, kernel= "optimal")
+knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel= "optimal")
 
-kknn_fit <- train(form = response~ .,
+knn_fit <- train(form = response~ .,
                  data = cred,
                  trControl = train_control,
                  tuneGrid = knn_parameters,
@@ -1035,7 +1036,7 @@ Now that we have seen in detail how the cross validation works thanks to this ha
 Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
 Let's run the cross validation on each model that we previously tuned. 
 
-```{r}
+```{r, results = 'hide'}
 train_control <- trainControl(method = "cv", number = 10)
 
 rpart_cv <- train(form = response~ .,
@@ -1089,7 +1090,13 @@ nnet_cv$results$Accuracy
 svm_cv$results$Accuracy
 knn_cv$results$Accuracy
 rf_cv$results$Accuracy
-cart_cv$results$Accuracy
 ```
 
+```{r}
+confusionMatrix(rpart_cv)$table
+confusionMatrix(nnet_cv)$table
+confusionMatrix(svm_cv)$table
+confusionMatrix(knn_cv)$table
+confusionMatrix(rf_cv)$table
+```
 
