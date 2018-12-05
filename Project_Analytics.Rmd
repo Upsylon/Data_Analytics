@@ -2,7 +2,10 @@
 title: "Project_Data_Anlytics"
 author: "Bron_Luca, Grandadam_Patrik"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
  - [Introduction](#Intro)
@@ -48,6 +51,7 @@ library(rpart.plot)
 library(maptree)
 library(caret)
 library(e1071)
+library(randomForest)
 library(gmodels)
 library(MASS)
 library(nnet)
@@ -421,7 +425,7 @@ In addition, to evaluate our models, we will use the accuracy as main measure of
 ```{r}
 # Creating of a function to retrieve the accuracy from a confusion matrix
 accuracy <- function(c){
-  print(sum(diag(c))/sum(c))
+  print(sum(diag(c)) / sum(c))
 }
 ```
 
@@ -561,6 +565,8 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
 
+
+**A MODIFIER // SUPPRIMER**
 La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw) suggère de garder 1 seul layer un nb de neuronnes entre 1 et le nbr de dim: on va les tester tous et garder le meilleur...
 "In sum, for most problems, one could probably get decent performance (even without a second optimization step) by setting the hidden layer configuration using just two rules: (i) number of hidden layers equals one; and (ii) the number of neurons in that layer is the mean of the neurons in the input and output layers."
 
@@ -570,7 +576,7 @@ La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-t
 
 
 
-```{r, results="hide"}
+```{r, results = "hide"}
 train_control <- trainControl(method = "cv", number = 5)
 
 nnet_fit <- train(form = response~ .,
@@ -590,7 +596,7 @@ nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay # the decay maximi
 We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay`.
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
 
-```{r, results='hide'}
+```{r, results = 'hide'}
 nnet.model.retained <- 
   nnet(cred.train$response ~ .,
        data = cred.train, maxit = 200,
@@ -727,6 +733,102 @@ Again, we will compare this model with the others in a final step using a cross 
 
 ## Random Forest {#RF}
 
+Another model that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
+Indeed, the model is built **DESCRIPTION**....
+
+Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power.  
+** COMPLETER UN PEU...**
+
+Finally, we will select the *mtry* that leads to the highest accuracy.  
+
+
+```{r}
+rf_parameters <- data.frame(mtry = c(7:14))
+# note that we first tested a wider scope of values (from 0 to 1000)
+# and now present only the interval that leads to the best results
+
+rf_fit <- train(form = response ~ .,
+                 data = cred,
+                 method = "rf",
+                 ntree = 500, 
+                 tuneGrid = rf_parameters,
+                 preProcess = "range",
+                 trace = FALSE,
+                 trControl = train_control)
+```
+
+
+We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. 
+
+
+Now that we have built our model, we can select the optimal mtry to continue our analysis.  
+
+```{r}
+plot(rf_fit) 
+
+rf_fit$results
+rf_fit$results[which.max(rf_fit$results$Accuracy),]$mtry # the cost maximizing the accuracy
+```
+
+According to these results, we see that we should consider  `r rf_fit$results[which.max(rf_fit$results$Accuracy),]$mtry` variables at each split, which leads to the highest accuracy.
+
+We can now analyse more in depth this model.
+
+```{r}
+rf.model.retained <- 
+  randomForest(formula = response ~ .,
+               data = cred.train, 
+               ntree = 500, 
+               mtry = rf_fit$results[which.max(svm_fit$results$Accuracy),]$mtry, 
+               importance = TRUE)
+```
+
+Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph.
+
+```{r}
+plot(rf.model.retained)
+```
+
+Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
+However, not like for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
+
+**INTERPRETATION DE COMMENT CA MARCHE** --> on retire un variable ca diminue --> variables importantes en haut
+
+```{r}
+varImpPlot(rf.model.retained) 
+```
+
+
+Finally, we can predict the values of our testing set, build the confusion matrix and predict the accuracy. 
+
+```{r, echo = FALSE}
+# Predictions on the test set:
+pred.rf.retained <- predict(rf.model.retained, cred.test, type = "class") 
+
+# Confusion matrix
+tab.rf.retained <- table(Reality = cred.test$response, 
+                           Predicted = unlist(pred.rf.retained)) 
+# Accuracy
+acc.rf.retained <- accuracy(tab.rf.retained)
+```
+
+```{r}
+tab.rf.retained %>% kable(
+  caption = "Confusion matrix of the fitted SVM model",
+  col.names = c("Predict good", "Predict bad")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+```
+
+Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
+
+
 
 
 
@@ -752,20 +854,20 @@ Again, we will compare this model with the others in a final step using a cross 
 The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency.  
 However, we ran it one to be able to evaluate which distance measure to select.  
 
-```{r}
-# kknn_parameters <- expand.grid(k = 2:30, distance = 1:5, kernel= "optimal")
-# 
-# kknn_fit <- train(form = response~ .,
-#                  data = cred,
-#                  trControl = train_control,
-#                  tuneGrid = knn_parameters,
-#                  method = "kknn",
-#                  preProcess = c("center", "scale"))
-# plot(kknn_fit)
-# kknn_fit$results
-# 
-# kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
-# kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
+```{r, eval = FALSE}
+kknn_parameters <- expand.grid(k = 2:30, distance = 1:5, kernel= "optimal")
+
+kknn_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = knn_parameters,
+                 method = "kknn",
+                 preProcess = c("center", "scale"))
+plot(kknn_fit)
+kknn_fit$results
+
+kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
+kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
 ```
 
 After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above.) 
@@ -787,11 +889,11 @@ knn_fit$results
 knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
 ```
 
-The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` neerest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
+The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` nearest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
 
 ### Predicting the values of the testing set
 
-```{r, comment=NA, echo=FALSE}
+```{r, comment = NA, echo = FALSE}
 pred.knn <- predict(knn_fit, newdata = cred.test)
 
 # confusion matrix
@@ -843,12 +945,16 @@ Given our confusion matrix, on our initial testing set, the obtained accuracy is
 
 # Cross Validation approach {#CV}
 
---> Expliquer pourquoi on fait une cross-validation
---> 
+At this point, let's make a summary of the situation.  
+Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network* etc.  
+However, we still have to confront each model to be able to select the *overall winner*.  
+In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the test set.  
+To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold Cross Validation.  
+With this technique, we will use 10 different training set and 10 different testing sets. Our original dataset will be split in 10, using at each iteration 1/10 of the original dataset as a testing set and the rest as a training set. Using this method, each instance will be once (and exactly once) in the testing set.  
+We will then be able to compute the accuracy on the different testing set for each iteration of the cross validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly. 
 
+Thus, we begin with a creation of 10 different sets in order to do the Cross-Validation.
 
-
-Creation of 10 different sets in order to do the Cross-Validation.
 The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.
 
 ```{r}
