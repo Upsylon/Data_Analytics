@@ -12,7 +12,6 @@ output:
  - [Exploratory analysis](#Exp)
  - [Modelling](#Mod)
     - [CART](#CART)
-    - [Logistic Regression](#Logit)
     - [Neural Network](#NN)
     - [Support Vector Machine](#SVM)
     - [Random Forest](#RF)
@@ -412,7 +411,7 @@ A Cross-Validation will be performed at the end in order to compare the differen
 
 ```{r}
 # Creation of testing and training sets
-set.seed(1234) 
+set.seed(123) 
 index.train <- sample(1:nrow(cred), size = nrow(cred) * 0.7, replace = FALSE)
 cred.train <- cred[index.train,]
 cred.test <- cred[-index.train,]
@@ -953,6 +952,8 @@ To be sure that the score of the model are not impacted (too much) by the charac
 With this technique, we will use 10 different training set and 10 different testing sets. Our original dataset will be split in 10, using at each iteration 1/10 of the original dataset as a testing set and the rest as a training set. Using this method, each instance will be once (and exactly once) in the testing set.  
 We will then be able to compute the accuracy on the different testing set for each iteration of the cross validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly. 
 
+We will firstly make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible. 
+
 Thus, we begin with a creation of 10 different sets in order to do the Cross-Validation.
 
 The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.
@@ -974,40 +975,44 @@ for (i in 1:10){
 For example, *test.list[[1]]* is a data set of 300 rows taken at random from our data.
 
 ```{r} 
-# test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
-#                 full_width = F) %>%
-#   scroll_box(width = "100%", height = "200px")
-# 
-# 
-# train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
-#                 full_width = F) %>%
-#   scroll_box(width = "100%", height = "200px")
+test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = F) %>%
+  scroll_box(width = "100%", height = "200px")
+
+
+train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = F) %>%
+  scroll_box(width = "100%", height = "200px")
 ```
 
+As already said, we first make the whole procedure on one model before using the caret package.  
+We choose to present in details the CART model tuned and pruned.  
+We have already built our 10 different training set and we will use them to make the predictions and calculate the accuracy of our 10 testing set. 
 
 ### CART Model
 
+```{r, results = 'hide'}
+# creating an empty vector to store the accuracy of each iteration
+acc.cart.cv <- numeric(10) 
 
-```{r, chache = TRUE, results='hide'}
-acc.cart.cv <- numeric(10)
 for (i in 1:10){
-  cart.cv <- rpart(response~., data=train.list[[i]]) # original tree
+  cart.cv <- rpart(response~., data = train.list[[i]]) # original tree
   
   # Tree to be prune at: 
-  cp.pruned <- cart.model$cptable[(
-    min(which(cart.model$cptable[, ncol(cart.model$cptable) - 1] < 
-                cart.model$cptable[nrow(cart.model$cptable), 
-                                   ncol(cart.model$cptable)] + 
-                cart.model$cptable[nrow(cart.model$cptable), 
-                                   ncol(cart.model$cptable) - 1]))), 1] 
+  cp.pruned <- cart.cv$cptable[(
+    min(which(cart.cv$cptable[, ncol(cart.cv$cptable) - 1] < 
+                cart.cv$cptable[nrow(cart.cv$cptable), 
+                                   ncol(cart.cv$cptable)] + 
+                cart.cv$cptable[nrow(cart.cv$cptable), 
+                                   ncol(cart.cv$cptable) - 1]))), 1] 
   
   # the pruned tree for predictions
-  cart.pruned.cv <- prune(cart.model, cp = cp.pruned) 
+  cart.pruned.cv <- prune(cart.cv, cp = cp.pruned) 
   
   # making the predictions
-  cart.pred.cv <- predict(cart.pruned.cv, newdata=test.list[[i]], type="class") 
+  cart.pred.cv <- predict(cart.pruned.cv, newdata = test.list[[i]], type = "class") 
   
   # the confusion matrix
   tab.cart.cv <- table(test.list[[i]]$response, cart.pred.cv) 
@@ -1017,42 +1022,74 @@ for (i in 1:10){
 }
 ```
 
-
-
-```{r}
-acc.cart.cv
-mean(acc.cart.cv)
-sd(acc.cart.cv)
-```
-
-
+We can now extract what we are interested in: informations about the accuracy.
 
 ```{r}
-# train_control <- trainControl(method = "cv", number = 10)
-# 
-# knn_parameters <- data.frame (k = 3:30)
-# 
-# knn_fit <- train(form = response~ .,
-#                  data = cred,
-#                  trControl = train_control,
-#                  tuneGrid = knn_parameters,
-#                  method = "knn",
-#                  preProcess = c("center", "scale"))
-# plot(knn_fit)
-# knn_fit$results
+acc.cart.cv # the accuracies obtained on each testing set
+mean(acc.cart.cv) # the average accuracy
+sd(acc.cart.cv) # the standard deviation of the accuracies
 ```
+ 
+Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable.  
+Now that we have seen in detail how the cross validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.  
+Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
+Let's run the cross validation on each model that we previously tuned. 
 
-```{r, eval= FALSE}
+```{r}
 train_control <- trainControl(method = "cv", number = 10)
 
-nnet_fit <- train(form = response~ .,
+rpart_cv <- train(form = response~ .,
                  data = cred,
                  trControl = train_control,
-                 tuneGrid = expand.grid(size = 10:20, decay = 1:5),
+                 method = "rpart1SE")
+
+nnet_cv <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = data.frame(size = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size, decay = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay),
                  method = "nnet")
 
-plot(nnet_fit)
-nnet_fit
-nnet_fit$results
+svm_cv <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = data.frame(
+                   C = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C),
+                 method = "svmRadialCost")
+
+knn_cv <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = data.frame(
+                   k = knn_fit$results[which.max(knn_fit$results$Accuracy),]$k),
+                 method = "knn",
+                 preProcess = c("center", "scale"))
+
+rf_cv <- train(form = response ~ .,
+                 data = cred,
+                 method = "rf",
+                 ntree = 500, 
+                 tuneGrid = data.frame(
+                   mtry=rf_fit$results[which.max(rf_fit$results$Accuracy),]$mtry),
+                 preProcess = "range",
+                 trace = FALSE,
+                 trControl = train_control)
+
+cart_cv <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = data.frame(
+                   k = knn_fit$results[which.max(knn_fit$results$Accuracy),]$k),
+                 method = "knn",
+                 preProcess = c("center", "scale"))
 ```
+
+```{r}
+rpart_cv$results$Accuracy
+nnet_cv$results$Accuracy
+svm_cv$results$Accuracy
+knn_cv$results$Accuracy
+rf_cv$results$Accuracy
+cart_cv$results$Accuracy
+```
+
 
