@@ -19,3 +19,5 @@ nnet
 neuralnet
 NeuralNetTools
 kknn
+e1071
+randomForest

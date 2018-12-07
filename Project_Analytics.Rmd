@@ -404,6 +404,21 @@ for(i in 1:(length(cred) - 1)){
 
 # Modelling {#Mod}
 
+```{r}
+for (i in 1:(length(cred)-1)) {
+  if (range(cred[, i])[2] - range(cred[, i])[1] < 5) {
+    cred[, i] <- cred[, i] %>% as.character %>% as.factor
+  }
+}
+```
+
+We can again look at our data to check if the categorical variables were indeed changed as factors.
+
+```{r}
+str(cred)
+```
+
+
 Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
 In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
@@ -412,7 +427,7 @@ A Cross-Validation will be performed at the end in order to compare the differen
 ```{r}
 # Creation of testing and training sets
 set.seed(123) 
-index.train <- sample(1:nrow(cred), size = nrow(cred) * 0.7, replace = FALSE)
+index.train <- createDataPartition(y = cred$response, p = 0.7, list = FALSE)
 cred.train <- cred[index.train,]
 cred.test <- cred[-index.train,]
 ```
@@ -582,6 +597,8 @@ nnet_fit <- train(form = response~ .,
                  data = cred,
                  trControl = train_control,
                  tuneGrid = expand.grid(size = 14:25, decay = c(1.0, 1.5, 2)),
+                 MaxNWts = 3000,
+                 trace = FALSE,
                  method = "nnet")
 
 plot(nnet_fit)
@@ -598,7 +615,10 @@ As usual, we trained the model and predict the values of the test set to be able
 ```{r, results = 'hide'}
 nnet.model.retained <- 
   nnet(cred.train$response ~ .,
-       data = cred.train, maxit = 200,
+       data = cred.train, 
+       maxit = 200,
+       MaxNWts = 3000,
+       trace = FALSE,
        size = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size, 
        decay = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay)
 
@@ -851,7 +871,7 @@ Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on t
 
 ### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
 
-The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency.  
+The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency (we have "*eval = FALSE*").  
 However, we ran it one to be able to evaluate which distance measure to select.  
 
 ```{r, eval = FALSE}
@@ -1047,7 +1067,12 @@ rpart_cv <- train(form = response~ .,
 nnet_cv <- train(form = response~ .,
                  data = cred,
                  trControl = train_control,
-                 tuneGrid = data.frame(size = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size, decay = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay),
+                 tuneGrid = 
+                   data.frame(
+                     size = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size,
+                     decay = nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay),
+                 MaxNWts = 3000,
+                 trace = FALSE,
                  method = "nnet")
 
 svm_cv <- train(form = response~ .,
