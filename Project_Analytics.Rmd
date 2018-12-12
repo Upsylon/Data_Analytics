@@ -18,8 +18,7 @@ output:
     - [K-Nearest Neighbors](#KNN)
     - [....]()
  - [Cross Validation Approach](#CV)
- - [...](#)
- - [...](#)
+ - [Discussion](#Disc)
 
 **LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
 
@@ -95,10 +94,11 @@ sum(is.na(cred)) # checking if we have missing data
 
 # Introduction {#Intro}
 
-Parler de:
+**Parler de:**
 - méthode utilisée
 - grandes étapes
 - classification task (goal) =/= prediction
+- dire que c'est une *classification task*
 - [à compléter...]
 
 --> Exploration des données = 1st insight
@@ -106,6 +106,7 @@ Parler de:
 --> Cross validation avec les meilleurs de chq models pour selectionner le grand gagnant...
 
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
+
 
 
 ## Exploratory analysis {#Exp}
@@ -139,6 +140,8 @@ As we can see, the data are coherent with the infos that "the client" provided u
 More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
 We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
 
+**LUCA SI TU PEUX MODIFIER ICI EN FONCTION DE CE QUE TU AS RACONTé**
+
 ```{r}
 plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, fait des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
 ```
@@ -147,7 +150,8 @@ plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il 
 In addition, we can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
 
 ```{r, echo=FALSE}
-c(summary(cred$history)) %>% as.data.frame %>%
+c(summary(cred$history)) %>% 
+  as.data.frame %>%
   kable(caption = "Summary of variable history", 
         align = "l", col.names = c("Value")) %>%
   kable_styling(
@@ -156,8 +160,9 @@ c(summary(cred$history)) %>% as.data.frame %>%
     position = "float_left"
   )
 
-table(cred$history) %>% kable(caption = "Frequency table of history",
-                              col.names = c("Values", "Frequency")) %>%
+table(cred$history) %>% 
+  kable(caption = "Frequency table of history",
+        col.names = c("Values", "Frequency")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F
@@ -299,7 +304,7 @@ cred$education[which(education == -1)] <- 0
 
 Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
 
-```{r, echo=FALSE}
+```{r, echo = FALSE}
 gua <- rbind(table(guarantor), 
              paste(round(prop.table(table(guarantor)) * 100, 1), "%"))
 rownames(gua) <- c("sample size", "proportion")
@@ -375,7 +380,7 @@ We will get to this later. First, after having presented each variable, it could
 ### Interactions between the explanatory variables and the response variable
 
 
-Text... 
+**Text... **
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE}
 
@@ -570,9 +575,9 @@ CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
 We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good. 
 
 
---> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")
+--> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")?
 --> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
---> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (OU A LA FIN)
+--> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (**OU A LA FIN**)
 
 
 ## Neural Network {#NN}
@@ -750,16 +755,25 @@ tab.svm.retained %>% kable(
 With this model we obtain a final accuracy of `r acc.svm.retained` on the original testing set that we built at the beginning (without CV).  
 Again, we will compare this model with the others in a final step using a cross validation procedure performed on the same training sets and testing sets at the end of our analysis. 
 
-## Random Forest {#RF}
 
-Another model that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
-Indeed, the model is built **DESCRIPTION**....
+## Ensemble methods
 
-Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power.  
-** COMPLETER UN PEU...**
+**DIRE WHAT ARE ENSEMBLE METHODS**
+
+Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a really poor predictive power.  
+However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
+We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
+
+### Random Forest {#RF}
+
+The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
+Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
+Unlike the boosting, in the random forest, the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated.** Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." (M.-O. Boldi, 2018)
+
+Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
 
 Finally, we will select the *mtry* that leads to the highest accuracy.  
-
 
 ```{r}
 rf_parameters <- data.frame(mtry = c(7:14))
@@ -848,10 +862,10 @@ tab.rf.retained %>% kable(
 
 Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
 
+### Bagging
 
-
-
-
+The second ensemble method that we consider in bagging (which stands for Bootstrap AGGregatING). Again, the goal of using this technique is to increase the predictive power of the learners. It consists of drawing several random samples (with replacement) from the training data set, to construct a separate model for each sample and separate predictions for the test set. Finally, one should averaged these predictions to create a final prediction value.
+The goal of this process to built many small *uncorrelated learners* rather than one unique big learner to increase the predictive power of the model.  
 
 
 
@@ -1124,4 +1138,18 @@ confusionMatrix(svm_cv)$table
 confusionMatrix(knn_cv)$table
 confusionMatrix(rf_cv)$table
 ```
+
+
+
+
+
+
+
+# Discussion
+
+
+# References
+
+
+
 
