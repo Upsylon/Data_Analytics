@@ -5,6 +5,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     toc: true
+    toc_depth: 2
     toc_float: true
 ---
 
@@ -109,11 +110,11 @@ sum(is.na(cred)) # checking if we have missing data
 
 
 
-## Exploratory analysis {#Exp}
+# Exploratory analysis {#Exp}
 
-### Explanatory variables
+## Explanatory variables
 
-#### Overview 
+### Overview 
 
 Before beginning any kind of analysis, we have to understand the data we are working with. 
 
@@ -138,12 +139,12 @@ data.frame(variable = names(cred),
 As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical.  
 
 More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
-We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
+We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likely to influence it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
 
 **LUCA SI TU PEUX MODIFIER ICI EN FONCTION DE CE QUE TU AS RACONTé**
 
 ```{r}
-plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, fait des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
+plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, faire des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
 ```
 
 
@@ -209,8 +210,8 @@ for (i in 1:(length(cred)-1)) {
 
 Thanks to these graphs, we can better understand our data at a glance and will be able to refer to them when needed.  
 
-In addition, these graphs enable un too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
-In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
+In addition, these graphs enable us too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
+In addition, we can also have strong suspitions that the variable *age* has wrongly recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
 Let's first look at our variable *age*. We assume that, generally, a person will not live more than a hundred year, and will not contract a credit at such age. This is why the data with $Age > 100$ are most likely wrongly recorded. We will therefore have to replace them in our database.  
@@ -237,8 +238,8 @@ which(age > 100) %>% kable(caption="Position of instance with age > 100") %>%
 
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
-We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$.  
-However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values (which is logical as young people generally have less money than elders and therefore are more subject to ask for credits).  
+We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$).  
+However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values (which is logical as young people generally have less money than elders and therefore are more subject to ask for credits).   
 
 ```{r, fig.height=4, fig.width=4, message=FALSE, warning=FALSE, echo=FALSE}
 ggplot(cred, aes(x = cred$age)) + 
@@ -258,17 +259,17 @@ Note that for calculating the median, our problematic value should not be used.
 cred$age[which(age>75)] <- median(age[age!=max(age)])
 ```
 
-An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to eachother ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
+An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to each other ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
 
 &nbsp;  
 
-Next, we also have to deal with our two categorical data that have been wrong recorded:  
+Next, we also have to deal with our two categorical data that have been wrongly recorded:  
     - one in *education*  
     - one in *guarantor*
 
-They also have to be cleaned. 
+They also have to be cleaned.  
 
-The following is again the barplot of *education*. 
+The following is again the barplot of *education*.  
 
 ```{r, fig.height=4, fig.width=4, echo=FALSE}
 ggplot(cred, aes(x = cred$education)) +
@@ -279,7 +280,7 @@ ggplot(cred, aes(x = cred$education)) +
   my_theme()
 ```
 
-Here, the likelihood that this wrong recorded data is equal to $0$ is clearly higher. Therefore, each of the previously presented methods (using the mean, using the median and even assigning it to a class at random) would with a high probability result in assigning this instance and assign it the value $Education = 0$.  
+Here, the likelihood that this wrongly recorded data is equal to $0$ is clearly higher. Therefore, each of the previously presented methods (using the mean, using the median and even assigning it to a class at random) would, with a high probability, result in assigning the most likely instance and thus assigning it the value $Education = 0$.  
 We can confirm these first assumption with a frequency table:  
 
 ```{r, echo=FALSE}
@@ -327,11 +328,25 @@ ggplot(cred, aes(x = cred$guarantor)) +
   my_theme()
 ```
 
-Again, for the same reasons, it is preferable to replace the wrong recorded data by 0.  
+Again, for the same reasons, it is preferable to replace the wrongly recorded data by 0.  
 
 ```{r}
 cred$guarantor[which(guarantor == 2)] <- 0
 ```
+
+<br>
+
+Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
+However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
+He told us that...
+
+```{r}
+cred$age[which(age>75)] <- median(age[age!=max(age)])
+cred$education[which(education == -1)] <- 1
+cred$guarantor[which(guarantor == 2)] <- 1
+```
+
+<br>
 
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
@@ -342,7 +357,7 @@ cred$present_resident <- subtract(cred$present_resident, 1)
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
 We now have to focus in detail to the response variable on which the predictions should be made.   
  
-### Response variable
+## Response variable
 
 As our final goal is to predict if a customer should be classified as a risky one or not, we have to have a particular look at our response variable that establishes if an applicant presents a good or a bad risk.  
 Let's first have a look at its distribution:  
@@ -377,7 +392,7 @@ Optimally, this model should also minimise the number of credits that are predic
 
 We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
 
-### Interactions between the explanatory variables and the response variable
+## Interactions between the explanatory variables and the response variable
 
 
 **Text... **
