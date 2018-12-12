@@ -6,6 +6,7 @@ output:
   html_document:
     toc: true
     toc_float: true
+bibliography: biblio.bib
 ---
 
  - [Introduction](#Intro)
@@ -24,7 +25,7 @@ output:
 
 
 ```{r include = FALSE}
-knitr::opts_chunk$set(echo=TRUE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
@@ -584,15 +585,9 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
 
+Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
 
-**A MODIFIER // SUPPRIMER**
-La "littérature" (https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw) suggère de garder 1 seul layer un nb de neuronnes entre 1 et le nbr de dim: on va les tester tous et garder le meilleur...
-"In sum, for most problems, one could probably get decent performance (even without a second optimization step) by setting the hidden layer configuration using just two rules: (i) number of hidden layers equals one; and (ii) the number of neurons in that layer is the mean of the neurons in the input and output layers."
-
-"Over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight **decay.**"
-
---> On essaye de trouver le nombre "optimal" de neurones. Vu que neural network utilise des valeurs aléatoires au début pour lancer l'algo etc. Ca varie. On calcule donc 5 fois l'accuracy liée à chaque nombre de neurones et voir si y'a un nb de neurones optimal.
-
+In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay."@boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross Validation. 
 
 
 ```{r, results = "hide"}
@@ -614,7 +609,7 @@ nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay # the decay maximi
 
 ### Model selection and predicting the values of the testing set
 
-We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay`.
+We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay` which maximises the accuracy using a 5 fold CV. 
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
 
 ```{r, results = 'hide'}
@@ -758,8 +753,6 @@ Again, we will compare this model with the others in a final step using a cross 
 
 ## Ensemble methods
 
-**DIRE WHAT ARE ENSEMBLE METHODS**
-
 Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a really poor predictive power.  
 However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
 We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
@@ -769,7 +762,7 @@ We will consider two ensemble methods: the random forest and the bagging (Bootst
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest, the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated.** Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." (M.-O. Boldi, 2018)
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated.** Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." boldi2
 
 Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
 
