@@ -5,12 +5,14 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     toc: true
-    toc_depth: 2
     toc_float: true
 ---
 
  - [Introduction](#Intro)
  - [Exploratory analysis](#Exp)
+    - [Explanatory variables](#Exp2)
+    - [Response variables](#Exp3)
+    - [Interactions between the explanatory variables and the response variable](#Exp4)
  - [Modelling](#Mod)
     - [CART](#CART)
     - [Neural Network](#NN)
@@ -23,7 +25,7 @@ output:
 
 **LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
 
-
+À bouger ???
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo=TRUE)
 ```
@@ -112,7 +114,7 @@ sum(is.na(cred)) # checking if we have missing data
 
 # Exploratory analysis {#Exp}
 
-## Explanatory variables
+## Explanatory variables {#Exp2}
 
 ### Overview 
 
@@ -338,7 +340,10 @@ cred$guarantor[which(guarantor == 2)] <- 0
 
 Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
 However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
-He told us that...
+He told us that:
+> $Age = 75  
+Education = 1  
+Guarantor = 1$  
 
 ```{r}
 cred$age[which(age>75)] <- median(age[age!=max(age)])
@@ -357,7 +362,7 @@ cred$present_resident <- subtract(cred$present_resident, 1)
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
 We now have to focus in detail to the response variable on which the predictions should be made.   
  
-## Response variable
+## Response variable {#Exp3}
 
 As our final goal is to predict if a customer should be classified as a risky one or not, we have to have a particular look at our response variable that establishes if an applicant presents a good or a bad risk.  
 Let's first have a look at its distribution:  
@@ -368,7 +373,7 @@ ggplot(cred, aes(x = cred$response)) +
   geom_bar(stat = "count", position = "dodge") +
   ggtitle(str_c("Barplot of the response variable")) +
   xlab("Response variable") +
-  ylab("Total") +
+  ylab("Observations") +
   my_theme()
 ```
 
@@ -386,13 +391,13 @@ res %>% kable(caption = "Frequency table of our response variable",
 ```
 
 As we can see, if a random customer steps in the bank, the *a priori* probability that he will present a good ranking will be of 70%.  
-Without any calculations, the bank has more chances to make a good decision when octroying a credit.  
+Without any calculations, the bank has more chances to be octroying a credit to a person that will not default.  
 However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model to improve this initial accuracy that is obtained using a naive method of always octroying a credit.   
-Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "bad" credit is predicted as "good".  
+Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "good" credit is predicted as "bad".  
 
-We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
+We will get to this later. First, after having presented each variables, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
 
-## Interactions between the explanatory variables and the response variable
+## Interactions between the explanatory variables and the response variable {#Exp4}
 
 
 **Text... **
@@ -419,10 +424,12 @@ for(i in 1:(length(cred) - 1)){
 
 --> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
 
-** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ??!!** 
+** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ???!!** 
 
 
 # Modelling {#Mod}
+
+Many variables are observed factors, but are being processed as interger in the dataframe. Encoding the factor variables as factor will ease the analysis.
 
 ```{r}
 for (i in 1:(length(cred)-1)) {
@@ -439,9 +446,9 @@ str(cred)
 ```
 
 
-Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model.  
+Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used in order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
-In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
+In order to evaluate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
 A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
