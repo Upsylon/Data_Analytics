@@ -60,6 +60,7 @@ library(nnet)
 library(neuralnet)
 library(NeuralNetTools)
 library(kknn)
+library(gbm)
 ```
 
 
@@ -785,6 +786,7 @@ The first ensemble method that we will consider is the Random Forest. Considerin
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest, the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
 "A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated.** Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." boldi2
+The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
 Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
 
@@ -877,14 +879,62 @@ tab.rf.retained %>% kable(
 
 Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
 
-### Bagging
+### Boosting
 
-The second ensemble method that we consider in bagging (which stands for Bootstrap AGGregatING). Again, the goal of using this technique is to increase the predictive power of the learners. It consists of drawing several random samples (with replacement) from the training data set, to construct a separate model for each sample and separate predictions for the test set. Finally, one should averaged these predictions to create a final prediction value.
-The goal of this process to built many small *uncorrelated learners* rather than one unique big learner to increase the predictive power of the model.  
+The second ensemble method that we consider is boosting. Again, the goal of using this technique is to increase the predictive power of the learners. It consists of constructing a separate decision tree at each iteration of the process with the goal to improve and improve each the fitted trees at each iteration. In the end, the prediction will be the one that will be the most predicted by the different trees in average.  
+
+We begin by using, as usual, the caret package and create a grid to test different values for the parameters. Using a cross validation procedure, we will then select the parameters that lead to the highest accuracy. 
+
+```{r, results = 'hide', comments = NA}
+boo_parameters <- expand.grid(n.trees = c(3500, 4000, 4500), 
+                              shrinkage = c(0.001, 0.01, 0.02), 
+                              interaction.depth = 1,
+                              n.minobsinnode = 10)
+# We considered first more different parameters and the one presented are the ones 
+# that might best fit the data.
+
+boo_fit <- train(form = response ~ .,
+                 data = cred,
+                 method = "gbm",
+                 tuneGrid = boo_parameters,
+                 trControl = train_control)
+```
+
+The models with the different parameters have been trained and tested on their respective test set. The accuracy has been recorded for each parameters and we can view it thanks to the following graph:  
 
 
+```{r}
+plot(boo_fit)
+```
 
+According to this graph, we should select `r boo_fit$results[which.max(boo_fit$results$Accuracy),]$n.trees` trees and a shrinkage of `r boo_fit$results[which.max(boo_fit$results$Accuracy),]$shrinkage`.  
 
+Using these parameters, we can compute the corresponding model with the *gmb* function and explore it more in details.  
+
+```{r}
+boo.model.retained <- gbm(as.numeric(cred$response)-1 ~., 
+               data = cred, 
+               distribution = "adaboost",
+               shrinkage = boo_fit$results[which.max(boo_fit$results$Accuracy),]$shrinkage,
+               n.trees = boo_fit$results[which.max(boo_fit$results$Accuracy),]$n.trees)
+```
+
+Using this model, we can predict the instances of the testing set and build the corresponding confusion matrix.
+
+```{r, echo = FALSE}
+# Predictions on the test set:
+pred.boo.retained <- ifelse(
+  predict(boo.model.retained, 
+          cred.test, 
+          n.trees = boo_fit$results[which.max(boo_fit$results$Accuracy),]$n.trees,
+          type = "response") > 0.5, "good", "bad")
+
+# Confusion matrix
+tab.boo.retained <- table(Reality = cred.test$response, 
+                           Predicted = pred.boo.retained) 
+```
+
+The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` compared to the previous models. However, this accuracy has been built only on one unique testing set. We will later use a cross-validation appoach to see if this accuracy is robust when using multiple different training and testing sets.  
 
 
 
@@ -1129,13 +1179,15 @@ rf_cv <- train(form = response ~ .,
                  trace = FALSE,
                  trControl = train_control)
 
-cart_cv <- train(form = response~ .,
+boo_fit <- train(form = response ~ .,
                  data = cred,
-                 trControl = train_control,
+                 method = "gbm",
                  tuneGrid = data.frame(
-                   k = knn_fit$results[which.max(knn_fit$results$Accuracy),]$k),
-                 method = "knn",
-                 preProcess = c("center", "scale"))
+                 shrinkage = boo_fit$results[which.max(boo_fit$results$Accuracy),]$shrinkage,
+                 n.trees = boo_fit$results[which.max(boo_fit$results$Accuracy),]$n.trees, 
+                 interaction.depth = 1,
+                 n.minobsinnode = 10),
+                 trControl = train_control)
 ```
 
 ```{r}
@@ -1144,6 +1196,7 @@ nnet_cv$results$Accuracy
 svm_cv$results$Accuracy
 knn_cv$results$Accuracy
 rf_cv$results$Accuracy
+boo_fit$results$Accuracy
 ```
 
 ```{r}
@@ -1165,6 +1218,6 @@ confusionMatrix(rf_cv)$table
 
 # References
 
-
+\bibliography{bib}
 
 
