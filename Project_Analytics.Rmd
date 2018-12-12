@@ -11,6 +11,9 @@ bibliography: biblio.bib
 
  - [Introduction](#Intro)
  - [Exploratory analysis](#Exp)
+    - [Explanatory variables](#Exp2)
+    - [Response variables](#Exp3)
+    - [Interactions between the explanatory variables and the response variable](#Exp4)
  - [Modelling](#Mod)
     - [CART](#CART)
     - [Neural Network](#NN)
@@ -23,7 +26,7 @@ bibliography: biblio.bib
 
 **LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
 
-
+À bouger ???
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -110,11 +113,11 @@ sum(is.na(cred)) # checking if we have missing data
 
 
 
-## Exploratory analysis {#Exp}
+# Exploratory analysis {#Exp}
 
-### Explanatory variables
+## Explanatory variables {#Exp2}
 
-#### Overview 
+### Overview 
 
 Before beginning any kind of analysis, we have to understand the data we are working with. 
 
@@ -139,12 +142,12 @@ data.frame(variable = names(cred),
 As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical.  
 
 More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
-We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likeli to influe it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
+We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likely to influence it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
 
 **LUCA SI TU PEUX MODIFIER ICI EN FONCTION DE CE QUE TU AS RACONTé**
 
 ```{r}
-plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, fait des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
+plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, faire des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
 ```
 
 
@@ -210,8 +213,8 @@ for (i in 1:(length(cred)-1)) {
 
 Thanks to these graphs, we can better understand our data at a glance and will be able to refer to them when needed.  
 
-In addition, these graphs enable un too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
-In addition, we can also have strong suspitions that the variable *age* has wrong recorded data as we can see an outlier with a value much bigger than 100.  
+In addition, these graphs enable us too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
+In addition, we can also have strong suspitions that the variable *age* has wrongly recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
 Let's first look at our variable *age*. We assume that, generally, a person will not live more than a hundred year, and will not contract a credit at such age. This is why the data with $Age > 100$ are most likely wrongly recorded. We will therefore have to replace them in our database.  
@@ -238,8 +241,8 @@ which(age > 100) %>% kable(caption="Position of instance with age > 100") %>%
 
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
-We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$.  
-However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values (which is logical as young people generally have less money than elders and therefore are more subject to ask for credits).  
+We can consider different options to replace this value. The first one could be to replace it by a value at random within the range (a value at random between `r min(age)`  and `r max(age[age!=max(age)])`, which is the second lowest value after $125$).  
+However, according to the following histogram, the distribution of the age (without the erroneous data) is inequal with a concentration around small values (which is logical as young people generally have less money than elders and therefore are more subject to ask for credits).   
 
 ```{r, fig.height=4, fig.width=4, message=FALSE, warning=FALSE, echo=FALSE}
 ggplot(cred, aes(x = cred$age)) + 
@@ -259,17 +262,17 @@ Note that for calculating the median, our problematic value should not be used.
 cred$age[which(age>75)] <- median(age[age!=max(age)])
 ```
 
-An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to eachother ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
+An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to each other ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
 
 &nbsp;  
 
-Next, we also have to deal with our two categorical data that have been wrong recorded:  
+Next, we also have to deal with our two categorical data that have been wrongly recorded:  
     - one in *education*  
     - one in *guarantor*
 
-They also have to be cleaned. 
+They also have to be cleaned.  
 
-The following is again the barplot of *education*. 
+The following is again the barplot of *education*.  
 
 ```{r, fig.height=4, fig.width=4, echo=FALSE}
 ggplot(cred, aes(x = cred$education)) +
@@ -280,7 +283,7 @@ ggplot(cred, aes(x = cred$education)) +
   my_theme()
 ```
 
-Here, the likelihood that this wrong recorded data is equal to $0$ is clearly higher. Therefore, each of the previously presented methods (using the mean, using the median and even assigning it to a class at random) would with a high probability result in assigning this instance and assign it the value $Education = 0$.  
+Here, the likelihood that this wrongly recorded data is equal to $0$ is clearly higher. Therefore, each of the previously presented methods (using the mean, using the median and even assigning it to a class at random) would, with a high probability, result in assigning the most likely instance and thus assigning it the value $Education = 0$.  
 We can confirm these first assumption with a frequency table:  
 
 ```{r, echo=FALSE}
@@ -328,11 +331,28 @@ ggplot(cred, aes(x = cred$guarantor)) +
   my_theme()
 ```
 
-Again, for the same reasons, it is preferable to replace the wrong recorded data by 0.  
+Again, for the same reasons, it is preferable to replace the wrongly recorded data by 0.  
 
 ```{r}
 cred$guarantor[which(guarantor == 2)] <- 0
 ```
+
+<br>
+
+Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
+However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
+He told us that:
+> $Age = 75  
+Education = 1  
+Guarantor = 1$  
+
+```{r}
+cred$age[which(age>75)] <- median(age[age!=max(age)])
+cred$education[which(education == -1)] <- 1
+cred$guarantor[which(guarantor == 2)] <- 1
+```
+
+<br>
 
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
@@ -343,7 +363,7 @@ cred$present_resident <- subtract(cred$present_resident, 1)
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
 We now have to focus in detail to the response variable on which the predictions should be made.   
  
-### Response variable
+## Response variable {#Exp3}
 
 As our final goal is to predict if a customer should be classified as a risky one or not, we have to have a particular look at our response variable that establishes if an applicant presents a good or a bad risk.  
 Let's first have a look at its distribution:  
@@ -354,7 +374,7 @@ ggplot(cred, aes(x = cred$response)) +
   geom_bar(stat = "count", position = "dodge") +
   ggtitle(str_c("Barplot of the response variable")) +
   xlab("Response variable") +
-  ylab("Total") +
+  ylab("Observations") +
   my_theme()
 ```
 
@@ -372,13 +392,13 @@ res %>% kable(caption = "Frequency table of our response variable",
 ```
 
 As we can see, if a random customer steps in the bank, the *a priori* probability that he will present a good ranking will be of 70%.  
-Without any calculations, the bank has more chances to make a good decision when octroying a credit.  
+Without any calculations, the bank has more chances to be octroying a credit to a person that will not default.  
 However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model to improve this initial accuracy that is obtained using a naive method of always octroying a credit.   
-Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "bad" credit is predicted as "good".  
+Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "good" credit is predicted as "bad".  
 
-We will get to this later. First, after having presented each variable, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
+We will get to this later. First, after having presented each variables, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
 
-### Interactions between the explanatory variables and the response variable
+## Interactions between the explanatory variables and the response variable {#Exp4}
 
 
 **Text... **
@@ -405,10 +425,12 @@ for(i in 1:(length(cred) - 1)){
 
 --> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
 
-** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ??!!** 
+** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ???!!** 
 
 
 # Modelling {#Mod}
+
+Many variables are observed factors, but are being processed as interger in the dataframe. Encoding the factor variables as factor will ease the analysis.
 
 ```{r}
 for (i in 1:(length(cred)-1)) {
@@ -425,9 +447,9 @@ str(cred)
 ```
 
 
-Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used is order to avoid overfitting and to predict instances which have been used while building the model.  
+Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used in order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
-In order to evalate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
+In order to evaluate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
 A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
