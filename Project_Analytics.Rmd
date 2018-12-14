@@ -403,8 +403,9 @@ We will get to this later. First, after having presented each variables, it coul
 
 ## Interactions between the explanatory variables and the response variable {#Exp4}
 
+As already said, to better understand the link between the explanatory variable and the response variable, we can make multiple plot their respective interactions. It is possible to have first assumption of their behavior and to have guesses about their significiance. 
 
-**Text... **
+
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE}
 
@@ -425,10 +426,9 @@ for(i in 1:(length(cred) - 1)){
 }
 ```
 
+Based on these graphs, we can already have first insights about which variables might impact the response variable. Indeed, when the boxplots are well separated from each other like for the variable *chk_acct*, we might conclude that the variable will be important in our analysis as it well discriminates the response. However, we can not take any conclusion about the importance of variables where the boxplots are not well separated.
 
---> Expliquer qu'on peut deja avoir un premier apriori sur les variables qui vont avoir un impact
 
-** PAS TOP LES BOXPLOTS POUR LES VARIABLES BINAIRES ???!!** 
 
 
 # Modelling {#Mod}
@@ -599,19 +599,17 @@ CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
 
 We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good. 
 
-
---> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")?
---> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
---> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (**OU A LA FIN**)
-
-
 ## Neural Network {#NN}
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
 
 Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
 
+<<<<<<< HEAD
 In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay."@boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold cross-validation. 
+=======
+In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross Validation. 
+>>>>>>> 64c4a3d6ee89494e775612ed2b0e63e1280d860d
 
 
 ```{r, results = "hide"}
@@ -775,13 +773,80 @@ With this model we obtain a final accuracy of `r acc.svm.retained` on the origin
 Again, we will compare this model with the others in a final step using a cross-validation procedure performed on the same training sets and testing sets at the end of our analysis. 
 
 
-## Ensemble methods
+## K - Nearest Neighbors {#KNN}
+
+### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
+
+The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency (we have "*eval = FALSE*").  
+However, we ran it one to be able to evaluate which distance measure to select.  
+
+```{r, eval = FALSE}
+knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel= "optimal")
+
+knn_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = knn_parameters,
+                 method = "kknn",
+                 preProcess = c("center", "scale"))
+plot(kknn_fit)
+kknn_fit$results
+
+kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
+kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
+```
+
+After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above.) 
+
+We can thus use the *knn* function to see how the accuracy varies with different k between 2 an 30 and select the number of neighbors that lead to the highest accuracy. 
+
+```{r}
+knn_parameters <- expand.grid(k = 2:30)
+
+knn_fit <- train(form = response~ .,
+                 data = cred,
+                 trControl = train_control,
+                 tuneGrid = knn_parameters,
+                 method = "knn",
+                 preProcess = c("center", "scale"))
+plot(knn_fit)
+knn_fit$results
+
+knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
+```
+
+The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` nearest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
+
+### Predicting the values of the testing set
+
+```{r, comment = NA, echo = FALSE}
+pred.knn <- predict(knn_fit, newdata = cred.test)
+
+# confusion matrix
+knn.tab <- table(Predictions = pred.knn, Observations = cred.test$response) 
+cart.tab %>% kable(caption = "Confusion matrix for the K-NN model",
+                   col.names = c("Predict bad", "Predict good")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l") %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+```
+
+Given our confusion matrix, on our initial testing set, the obtained accuracy is equal to `r accuracy(knn.tab)`. 
+
+
+
+
+## Ensemble methods {#EM}
 
 Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a poor predictive power.  
 However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
 We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
 
-### Random Forest {#RF}
+### Random Forest 
 
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
@@ -880,6 +945,7 @@ tab.rf.retained %>% kable(
 
 Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
 
+
 ### Boosting
 
 The second ensemble method that we consider is boosting. Again, the goal of using this technique is to increase the predictive power of the learners. It consists of constructing a separate decision tree at each iteration of the process with the goal to improve and improve each the fitted trees at each iteration. In the end, the prediction will be the one that will be the most predicted by the different trees in average.  
@@ -946,70 +1012,6 @@ The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` co
 
 
 
-
-## K - Nearest Neighbors {#KNN}
-
-### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
-
-The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency (we have "*eval = FALSE*").  
-However, we ran it one to be able to evaluate which distance measure to select.  
-
-```{r, eval = FALSE}
-knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel= "optimal")
-
-knn_fit <- train(form = response~ .,
-                 data = cred,
-                 trControl = train_control,
-                 tuneGrid = knn_parameters,
-                 method = "kknn",
-                 preProcess = c("center", "scale"))
-plot(kknn_fit)
-kknn_fit$results
-
-kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
-kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
-```
-
-After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above.) 
-
-We can thus use the *knn* function to see how the accuracy varies with different k between 2 an 30 and select the number of neighbors that lead to the highest accuracy. 
-
-```{r}
-knn_parameters <- expand.grid(k = 2:30)
-
-knn_fit <- train(form = response~ .,
-                 data = cred,
-                 trControl = train_control,
-                 tuneGrid = knn_parameters,
-                 method = "knn",
-                 preProcess = c("center", "scale"))
-plot(knn_fit)
-knn_fit$results
-
-knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
-```
-
-The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` nearest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
-
-### Predicting the values of the testing set
-
-```{r, comment = NA, echo = FALSE}
-pred.knn <- predict(knn_fit, newdata = cred.test)
-
-# confusion matrix
-knn.tab <- table(Predictions = pred.knn, Observations = cred.test$response) 
-cart.tab %>% kable(caption = "Confusion matrix for the K-NN model",
-                   col.names = c("Predict bad", "Predict good")) %>%
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = F,
-    position = "l") %>%
-  column_spec(1, border_right = T, width = "5em") %>%
-  column_spec(2, width = "6em") %>%
-  column_spec(3, width = "6em")
-```
-
-Given our confusion matrix, on our initial testing set, the obtained accuracy is equal to `r accuracy(knn.tab)`. 
 
 
 
@@ -1180,7 +1182,7 @@ rf_cv <- train(form = response ~ .,
                  trace = FALSE,
                  trControl = train_control)
 
-boo_fit <- train(form = response ~ .,
+boo_cv <- train(form = response ~ .,
                  data = cred,
                  method = "gbm",
                  tuneGrid = data.frame(
@@ -1191,22 +1193,50 @@ boo_fit <- train(form = response ~ .,
                  trControl = train_control)
 ```
 
-```{r}
-rpart_cv$results$Accuracy
-nnet_cv$results$Accuracy
-svm_cv$results$Accuracy
-knn_cv$results$Accuracy
-rf_cv$results$Accuracy
-boo_fit$results$Accuracy
-```
+Now that all the models are built, it is possible to extract the accuracy of all of them.
 
 ```{r}
-confusionMatrix(rpart_cv)$table
-confusionMatrix(nnet_cv)$table
-confusionMatrix(svm_cv)$table
-confusionMatrix(knn_cv)$table
-confusionMatrix(rf_cv)$table
+accuracies <- data.frame(RPART = rpart_cv$results$Accuracy, NNET = nnet_cv$results$Accuracy,
+                         SVM = svm_cv$results$Accuracy, KNN = knn_cv$results$Accuracy, 
+                         RF = rf_cv$results$Accuracy, Boosting = boo_cv$results$Accuracy)
+
+accuracies %>% kable(caption = "Accuracies of the different models",
+                     col.names = c("Rpart", "NNET", "SVM",
+                                   "KNN", "Random Forest", "Boosting")) %>% 
+  column_spec(1, width = "6em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em") %>%
+  column_spec(4, width = "6em") %>%
+  column_spec(5, width = "6em") %>%
+  column_spec(6, width = "6em")
+
 ```
+
+Based on these measure of accuracy only, we can see that the model providing the best accuracy is the `r names(which.max(accuracies))`.  
+Based only on this measure, we would select this one. However, we can go further in the analysis by considering the confusion matrices of each model.
+
+
+```{r}
+models <- c("rpart_cv","svm_cv","knn_cv","rf_cv","boo_cv")
+
+for (i in 1:length(models)) {
+print(confusionMatrix(models[i] %>% get)$table %>% 
+        kable(caption = paste("Confusion matrix for the", models[i] , "model"),
+                   col.names = c("Predict bad", "Predict good")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l") %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em"))
+}
+```
+
+
+--> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")?
+--> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
+--> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (**OU A LA FIN**)
 
 
 
@@ -1219,6 +1249,6 @@ confusionMatrix(rf_cv)$table
 
 # References
 
-\bibliography{bib}
+
 
 
