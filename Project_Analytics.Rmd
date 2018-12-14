@@ -1,6 +1,6 @@
 ---
-title: "Project_Data_Anlytics"
-author: "Bron_Luca, Grandadam_Patrik"
+title: "Project Data Anlytics"
+author: "Bron Luca, Grandadam Patrik"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -21,12 +21,11 @@ bibliography: biblio.bib
     - [Random Forest](#RF)
     - [K-Nearest Neighbors](#KNN)
     - [....]()
- - [Cross Validation Approach](#CV)
+ - [cross-validation Approach](#CV)
  - [Discussion](#Disc)
 
 **LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
 
-À bouger ???
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -87,14 +86,9 @@ my_theme <- function(base_size = 10, base_family = "sans"){
 }
 ```
 
-```{r}
+```{r echo = False}
 names(cred) <- tolower(names(cred)) # changing the name of the variable into lowercase
 cred <- cred[,-1] # deleting the first useless column
-```
-
-
-```{r, results='hide'}
-sum(is.na(cred)) # checking if we have missing data
 ```
 
 # Introduction {#Intro}
@@ -108,7 +102,7 @@ sum(is.na(cred)) # checking if we have missing data
 
 --> Exploration des données = 1st insight
 --> Modelling: train/test set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
---> Cross validation avec les meilleurs de chq models pour selectionner le grand gagnant...
+--> cross-validation avec les meilleurs de chq models pour selectionner le grand gagnant...
 
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
 
@@ -121,6 +115,14 @@ sum(is.na(cred)) # checking if we have missing data
 ### Overview 
 
 Before beginning any kind of analysis, we have to understand the data we are working with. 
+
+First, we check if there is missing values.
+
+```{r, results='hide'}
+sum(is.na(cred)) # checking if we have missing data
+```
+
+Then, we get a first glance at the data.
 
 ```{r}
 data.frame(variable = names(cred),
@@ -148,7 +150,7 @@ We see for instances that variables like *chk_acct*, *duration*, *history*, *sav
 **LUCA SI TU PEUX MODIFIER ICI EN FONCTION DE CE QUE TU AS RACONTé**
 
 ```{r}
-plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, faire des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
+plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de Wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, faire des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
 ```
 
 
@@ -179,7 +181,7 @@ table(cred$history) %>%
 &nbsp;  
 
 
-However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A Boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
+However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
 ```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
 
@@ -343,9 +345,9 @@ cred$guarantor[which(guarantor == 2)] <- 0
 Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
 However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
 He told us that:
-> $Age = 75  
-Education = 1  
-Guarantor = 1$  
+    - $Age = 75  
+    - Education = 1
+    - Guarantor = 1$  
 
 ```{r}
 cred$age[which(age>75)] <- median(age[age!=max(age)])
@@ -447,7 +449,6 @@ We can again look at our data to check if the categorical variables were indeed 
 str(cred)
 ```
 
-
 Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used in order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
 In order to evaluate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
@@ -462,7 +463,7 @@ cred.test <- cred[-index.train,]
 ```
 
 
-In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long... We prefer to build a function to be able to retrieve at any time based on a confusion matrix:  
+In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long. We prefer to build a function to be able to retrieve at any time based on a confusion matrix:  
 
 
 ```{r}
@@ -479,7 +480,7 @@ We can now begin to work on the different models that we will use in order to ma
 First, we begin our analysis by using a decision (classification) tree.   
 
 The goal of a decision tree is to predict the final class of our response variable ("good" or "bad") by using a succession of binary rules to apply to our data.   
-Each node is created thanks to an algorithm that aims to minimize an impurity criterion. The feature and its underlying value  that maximises the impurity reduction (that "best splits"the dataset in two) will be selected. This procedure is repeated until a stopping rule is reached.  
+Each node is created thanks to an algorithm that aims to minimize an impurity criterion. The feature and its underlying value that maximises the impurity reduction (that "best splits" the dataset in two) will be selected. This procedure is repeated until a stopping rule is reached.  
 At the end, we will have multiple branches that will all lead to the final forecast that we will make for a given instances.  
 Better than words, let's compute the model and have a look at it.  
 
@@ -493,8 +494,8 @@ cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
 rpart.plot(cart.model, main = "Original decision tree")
 ```
 
---> At this time, we have obtained a decision tree that can be used to do the predictions. At it node, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
-However, this tree is also really complex: there are a lot of split and of branches.  
+--> At this time, we have obtained a decision tree that can be used to do the predictions. At its nodes, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
+However, this tree is also really complex: there are a lot of splits and branches.  
 We have to tune this initial model and make it more simple. We will simplify this model without loosing  predictive capabilities by pruning it, keeping only the most important splits linked to the most important variables.  
 
 ### Tuning the model: Pruning
@@ -610,7 +611,7 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 
 Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
 
-In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay."@boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross Validation. 
+In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay."@boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold cross-validation. 
 
 
 ```{r, results = "hide"}
@@ -633,7 +634,7 @@ nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay # the decay maximi
 ### Model selection and predicting the values of the testing set
 
 We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay` which maximises the accuracy using a 5 fold CV. 
-As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy. 
+As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy.  
 
 ```{r, results = 'hide'}
 nnet.model.retained <- 
@@ -670,7 +671,7 @@ plotnet(nnet.model.retained,
         pad_x = 0.8)
 ```
 
-This graph shows that our model can be quite complex, there a plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
+This graph shows that our model can be quite complex, there is plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
 
 
 ```{r, echo=FALSE}
@@ -689,12 +690,12 @@ tab.nnet.retained %>% kable(
 ```
 
 We obtain a final accuracy of `r round(acc.nnet.retained,3)` on our testing set. 
-Note that this accuracy is different from the one using the cross validation before as here, we use only one test set that may be disproportioned. We will, at the end, use again a cross validation for all models on the same train and test sets in order to compare the different models.  
+Note that this accuracy is different from the one using the cross-validation before. Here, we use only one test set that may be disproportioned. We will, at the end, use again a cross-validation for all models on the same train and test sets in order to compare the different models.  ???  
 
 
 ## Support Vector Machine {#SVM}
 
-Another important model that we will now consider and compare to the other ones will be the Support Vector Machines.  
+Another important model that we will now consider and compare to the other ones will be the Support Vector Machine.  
 This models aims at... **DESCRIPTION**
 
 ### Building the model
@@ -702,7 +703,7 @@ This models aims at... **DESCRIPTION**
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
-svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) 
+svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) ???
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -731,7 +732,7 @@ According to our results and by having tested different costs, we conclude that 
 
 
 
-We can then "extract" this model and analyze it on his own. We have to note that, as the Neural Network, SVM doesn't allow for much interpretations. What matters here is the quality of the predictions more than the individual interpretability of the different variables.  
+We can then "extract" this model and analyze it on his own. We have to note that, like the Neural Network, SVM doesn't allow for much interpretations. What matters here is the quality of the predictions more than the individual interpretability of the different variables.  
 In addition, to have a 2D graph, one should fix (slice) all other variables. Here, having 30 explanative variables, it does not make sense to fix 28 out of them and plotting is therefore not appropriate.  
 
 However, we can look at the predictions of the model.
@@ -745,16 +746,16 @@ svm.model.retained <-
        cost = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C)
 
 # Predictions on the test set:
-pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") 
+pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") ???nnet.model.retained
 
 # Confusion matrix
 tab.svm.retained <- table(Reality = cred.test$response, 
                            Predicted = unlist(pred.svm.retained)) 
 # Accuracy
-acc.svm.retained <- accuracy(tab.nnet.retained)
+acc.svm.retained <- accuracy(tab.nnet.retained) ???same
 ```
 
-We can build the confusion matrix and see how the models performs.
+We can build the confusion matrix and see how the model performs.
 
 ```{r}
 tab.svm.retained %>% kable(
@@ -771,12 +772,12 @@ tab.svm.retained %>% kable(
 ```
 
 With this model we obtain a final accuracy of `r acc.svm.retained` on the original testing set that we built at the beginning (without CV).  
-Again, we will compare this model with the others in a final step using a cross validation procedure performed on the same training sets and testing sets at the end of our analysis. 
+Again, we will compare this model with the others in a final step using a cross-validation procedure performed on the same training sets and testing sets at the end of our analysis. 
 
 
 ## Ensemble methods
 
-Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a really poor predictive power.  
+Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a poor predictive power.  
 However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
 We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
 
@@ -883,7 +884,7 @@ Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on t
 
 The second ensemble method that we consider is boosting. Again, the goal of using this technique is to increase the predictive power of the learners. It consists of constructing a separate decision tree at each iteration of the process with the goal to improve and improve each the fitted trees at each iteration. In the end, the prediction will be the one that will be the most predicted by the different trees in average.  
 
-We begin by using, as usual, the caret package and create a grid to test different values for the parameters. Using a cross validation procedure, we will then select the parameters that lead to the highest accuracy. 
+We begin by using, as usual, the caret package and create a grid to test different values for the parameters. Using a cross-validation procedure, we will then select the parameters that lead to the highest accuracy. 
 
 ```{r, results = 'hide', comments = NA}
 boo_parameters <- expand.grid(n.trees = c(3500, 4000, 4500), 
@@ -1042,15 +1043,15 @@ Given our confusion matrix, on our initial testing set, the obtained accuracy is
 
 
 
-# Cross Validation approach {#CV}
+# cross-validation approach {#CV}
 
 At this point, let's make a summary of the situation.  
 Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network* etc.  
 However, we still have to confront each model to be able to select the *overall winner*.  
 In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the test set.  
-To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold Cross Validation.  
+To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold cross-validation.  
 With this technique, we will use 10 different training set and 10 different testing sets. Our original dataset will be split in 10, using at each iteration 1/10 of the original dataset as a testing set and the rest as a training set. Using this method, each instance will be once (and exactly once) in the testing set.  
-We will then be able to compute the accuracy on the different testing set for each iteration of the cross validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly. 
+We will then be able to compute the accuracy on the different testing set for each iteration of the cross-validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly. 
 
 We will firstly make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible. 
 
@@ -1130,10 +1131,10 @@ mean(acc.cart.cv) # the average accuracy
 sd(acc.cart.cv) # the standard deviation of the accuracies
 ```
  
-Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable.  
-Now that we have seen in detail how the cross validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.  
+Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross-validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable.  
+Now that we have seen in detail how the cross-validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.  
 Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
-Let's run the cross validation on each model that we previously tuned. 
+Let's run the cross-validation on each model that we previously tuned. 
 
 ```{r, results = 'hide'}
 train_control <- trainControl(method = "cv", number = 10)
