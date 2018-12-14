@@ -20,8 +20,8 @@ bibliography: biblio.bib
     - [Support Vector Machine](#SVM)
     - [Random Forest](#RF)
     - [K-Nearest Neighbors](#KNN)
-    - [....]()
- - [cross-validation Approach](#CV)
+    - [Ensemble methods](#EM)
+ - [Cross-validation Approach](#CV)
  - [Discussion](#Disc)
 
 **LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
@@ -102,7 +102,7 @@ cred <- cred[,-1] # deleting the first useless column
 
 --> Exploration des données = 1st insight
 --> Modelling: train/test set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
---> cross-validation avec les meilleurs de chq models pour selectionner le grand gagnant...
+--> Cross-validation avec les meilleurs de chq models pour selectionner le grand gagnant...
 
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
 
@@ -118,7 +118,7 @@ Before beginning any kind of analysis, we have to understand the data we are wor
 
 First, we check if there is missing values.
 
-```{r, results='hide'}
+```{r}
 sum(is.na(cred)) # checking if we have missing data
 ```
 
@@ -452,7 +452,7 @@ str(cred)
 Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used in order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
 In order to evaluate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
-A Cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
+A cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
 # Creation of testing and training sets
@@ -605,11 +605,9 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 
 Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
 
-<<<<<<< HEAD
-In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay."@boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold cross-validation. 
-=======
+
 In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross Validation. 
->>>>>>> 64c4a3d6ee89494e775612ed2b0e63e1280d860d
+
 
 
 ```{r, results = "hide"}
@@ -669,7 +667,7 @@ plotnet(nnet.model.retained,
         pad_x = 0.8)
 ```
 
-This graph shows that our model can be quite complex, there is plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
+This graph shows that our model can be quite complex, there are plenty of arrows. It is not necessary to understand precisely all of them and they can be seen as a "black box", meaning that the interpretability of such a model is modest. But, afterall, what we need is to make good predictions!
 
 
 ```{r, echo=FALSE}
@@ -815,7 +813,7 @@ knn_fit$results
 knn_fit$results[which.max(knn_fit$results$Accuracy),]$k
 ```
 
-The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` nearest neighbors. The obtained accuracy using a 5 fold Cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
+The selected knn model uses a distance of 2 and is computed with the `r knn_fit$results[which.max(knn_fit$results$Accuracy),]$k` nearest neighbors. The obtained accuracy using a 5 fold cross-Validation is equal to `r max(knn_fit$results$Accuracy)`. 
 
 ### Predicting the values of the testing set
 
@@ -1045,7 +1043,7 @@ The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` co
 
 
 
-# cross-validation approach {#CV}
+# Cross-validation approach {#CV}
 
 At this point, let's make a summary of the situation.  
 Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network* etc.  
@@ -1057,7 +1055,7 @@ We will then be able to compute the accuracy on the different testing set for ea
 
 We will firstly make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible. 
 
-Thus, we begin with a creation of 10 different sets in order to do the Cross-Validation.
+Thus, we begin with a creation of 10 different sets in order to do the cross-Validation.
 
 The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.
 
