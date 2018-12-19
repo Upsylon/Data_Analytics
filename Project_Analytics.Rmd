@@ -612,7 +612,9 @@ In addition, "over-parametrization quickly lead to instability in the estimate a
 
 ```{r, results = "hide"}
 train_control <- trainControl(method = "cv", number = 5)
+```
 
+```{r, results = "hide"}
 nnet_fit <- train(form = response~ .,
                  data = cred,
                  trControl = train_control,
@@ -699,7 +701,7 @@ This models aims at... **DESCRIPTION**
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
-svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) ???
+svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) #???
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -742,13 +744,13 @@ svm.model.retained <-
        cost = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C)
 
 # Predictions on the test set:
-pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") ???nnet.model.retained
+pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") #???nnet.model.retained
 
 # Confusion matrix
 tab.svm.retained <- table(Reality = cred.test$response, 
                            Predicted = unlist(pred.svm.retained)) 
 # Accuracy
-acc.svm.retained <- accuracy(tab.nnet.retained) ???same
+acc.svm.retained <- accuracy(tab.nnet.retained) #???same
 ```
 
 We can build the confusion matrix and see how the model performs.
@@ -776,7 +778,7 @@ Again, we will compare this model with the others in a final step using a cross-
 ### Building the model and Optimizing the model: selecting the number of neighbors and the distance measure
 
 The following code will not be run each time we execute our evaluation of the different models in order to gain in computing efficiency (we have "*eval = FALSE*").  
-However, we ran it one to be able to evaluate which distance measure to select.  
+However, we ran it once to be able to evaluate which distance measure to select.  
 
 ```{r, eval = FALSE}
 knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel= "optimal")
@@ -794,7 +796,7 @@ kknn_fit$results[which.max(knn_fit$results$Accuracy),]$k
 kknn_fit$results[which.max(knn_fit$results$Accuracy),]$distance
 ```
 
-After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above.) 
+After having created multiple K-Nearest Neighbors models with the knn function, we realize that the distance of 2 outperforms other distances. We can therefore use the function knn to illustrate how our final model is built and how we select k (note that *knn* function is more efficient in term of computationnal power, only reason why we use it to choose k rather than the *kknn* function just above). 
 
 We can thus use the *knn* function to see how the accuracy varies with different k between 2 an 30 and select the number of neighbors that lead to the highest accuracy. 
 
@@ -848,8 +850,8 @@ We will consider two ensemble methods: the random forest and the bagging (Bootst
 
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
-Unlike the boosting, in the random forest, the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated.** Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." boldi2
+Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." boldi2 ???
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
 Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
@@ -872,7 +874,7 @@ rf_fit <- train(form = response ~ .,
 ```
 
 
-We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. 
+We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. ???je comprends pas la justification
 
 
 Now that we have built our model, we can select the optimal mtry to continue our analysis.  
@@ -898,14 +900,14 @@ rf.model.retained <-
                importance = TRUE)
 ```
 
-Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph.
+Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph. ???explications des trois couleurs?
 
 ```{r}
 plot(rf.model.retained)
 ```
 
 Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
-However, not like for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
+However, unlike for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
 
 **INTERPRETATION DE COMMENT CA MARCHE** --> on retire un variable ca diminue --> variables importantes en haut
 
@@ -941,7 +943,7 @@ tab.rf.retained %>% kable(
   column_spec(3, width = "6em")
 ```
 
-Using the Random Forest,  we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
+Using the Random Forest, we obtain a final accuracy of `r acc.rf.retained` on the original testing set. 
 
 
 ### Boosting
@@ -1046,18 +1048,18 @@ The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` co
 # Cross-validation approach {#CV}
 
 At this point, let's make a summary of the situation.  
-Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network* etc.  
+Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network*, etc.  
 However, we still have to confront each model to be able to select the *overall winner*.  
-In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the test set.  
+In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the good fit of the method with the test set.  
 To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold cross-validation.  
 With this technique, we will use 10 different training set and 10 different testing sets. Our original dataset will be split in 10, using at each iteration 1/10 of the original dataset as a testing set and the rest as a training set. Using this method, each instance will be once (and exactly once) in the testing set.  
-We will then be able to compute the accuracy on the different testing set for each iteration of the cross-validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly. 
+We will then be able to compute the accuracy on the different testing set for each iteration of the cross-validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly.  
 
-We will firstly make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible. 
+We will first make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible.  
 
-Thus, we begin with a creation of 10 different sets in order to do the cross-Validation.
+Thus, we begin with a creation of 10 different sets in order to do the cross-Validation.  
 
-The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.
+The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.  
 
 ```{r}
 test.list <- list() # creates an empty list that will be the test sets
@@ -1131,8 +1133,9 @@ mean(acc.cart.cv) # the average accuracy
 sd(acc.cart.cv) # the standard deviation of the accuracies
 ```
  
-Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross-validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable.  
-Now that we have seen in detail how the cross-validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.  
+Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross-validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable since the original train and test sets were also chosen at random.
+
+Now that we have seen in detail how the cross-validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.   
 Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
 Let's run the cross-validation on each model that we previously tuned. 
 
