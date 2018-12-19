@@ -692,14 +692,14 @@ Note that this accuracy is different from the one using the cross-validation bef
 ## Support Vector Machine {#SVM}
 
 Another important model that we will now consider and compare to the other ones will be the Support Vector Machine.  
-This models aims at... **DESCRIPTION**
+This models aims at separating the feature space into higher dimensions, it searches for the linear optimal separating hyperplane (@Zuber) creating multiple spaces associated with the prediction of the different categories of the outcome variable (in our case, "good" and "bad"). 
 
 ### Building the model
 
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
-svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) ???
+svm_parameters <- data.frame(C = seq(0.5, 5, 0.5))
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -905,9 +905,10 @@ plot(rf.model.retained)
 ```
 
 Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
-However, not like for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
+However, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.  
+One is based on the average decrease in impurity a variable provide, the other is based on how bad the prediction becomes if the variable is shuffled. An important variable will in average decrease a lot the impurity of a tree either because it is often selected or because each time it provides a good split.   Also, if the variable is important, giving to the model an incorrect value of this variable should decrease a lot the prediction quality.  
+Therefore, in the following graph, the important variables are on the first lines of the graph and confirm what we have already assumed previously in our analysis concerning the important variables.  
 
-**INTERPRETATION DE COMMENT CA MARCHE** --> on retire un variable ca diminue --> variables importantes en haut
 
 ```{r}
 varImpPlot(rf.model.retained) 
