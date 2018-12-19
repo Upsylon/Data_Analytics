@@ -93,17 +93,25 @@ cred <- cred[,-1] # deleting the first useless column
 
 # Introduction {#Intro}
 
-**Parler de:**
-- méthode utilisée
-- grandes étapes
-- classification task (goal) =/= prediction
-- dire que c'est une *classification task*
-- [à compléter...]
+## Context
 
---> Exploration des données = 1st insight
---> Modelling: train/test set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
---> Cross-validation avec les meilleurs de chq models pour selectionner le grand gagnant...
+In this analysis, we aim at obtaining a model that may be used to determine if new applicants present a good or bad credit risk.
+To do this, we have at our disposal the *German Credit data* has data on 1000 past credit applicants, described by 30 variables. Each applicant is rated as Good or Bad.  
+The problem therefore consists in a classification task.
 
+## Methodology
+
+In order propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our data. Based on it, we will already be able to have some assumptions about which variables might be the most important one.
+Then, we continue by the modelling part. To present a decent amount of details, we first use different models that we present extensively, using a train set / test set approach to be able to compute the accuracy. Then, we tune them using a cross-validation for selection the best parameters.  
+Thus, we are able to prune the trees, select the best costs for SVM, the number of neurones and decay for the neural network, the K for the K-Nearest Neighboor etc. 
+Furthermore, using a cross-validation approach on the previously tuned models, we put all of them into competition to be able to select the model that, considering our dataset, leads to the best predictions.   
+Finally, we come with some conclusions and recommendations for the final user. 
+
+
+
+
+
+** A COMPLETER **
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
 
 
@@ -694,14 +702,18 @@ Note that this accuracy is different from the one using the cross-validation bef
 ## Support Vector Machine {#SVM}
 
 Another important model that we will now consider and compare to the other ones will be the Support Vector Machine.  
-This models aims at... **DESCRIPTION**
+This models aims at separating the feature space into higher dimensions, it searches for the linear optimal separating hyperplane (@Zuber) creating multiple spaces associated with the prediction of the different categories of the outcome variable (in our case, "good" and "bad"). 
 
 ### Building the model
 
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
+<<<<<<< HEAD
 svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) #???
+=======
+svm_parameters <- data.frame(C = seq(0.5, 5, 0.5))
+>>>>>>> f0e34c3ecce1aba849b78c6963725ec1b7678b91
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -907,9 +919,14 @@ plot(rf.model.retained)
 ```
 
 Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
+<<<<<<< HEAD
 However, unlike for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
+=======
+However, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.  
+One is based on the average decrease in impurity a variable provide, the other is based on how bad the prediction becomes if the variable is shuffled. An important variable will in average decrease a lot the impurity of a tree either because it is often selected or because each time it provides a good split.   Also, if the variable is important, giving to the model an incorrect value of this variable should decrease a lot the prediction quality.  
+Therefore, in the following graph, the important variables are on the first lines of the graph and confirm what we have already assumed previously in our analysis concerning the important variables.  
+>>>>>>> f0e34c3ecce1aba849b78c6963725ec1b7678b91
 
-**INTERPRETATION DE COMMENT CA MARCHE** --> on retire un variable ca diminue --> variables importantes en haut
 
 ```{r}
 varImpPlot(rf.model.retained) 
@@ -1002,44 +1019,6 @@ tab.boo.retained <- table(Reality = cred.test$response,
 ```
 
 The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` compared to the previous models. However, this accuracy has been built only on one unique testing set. We will later use a cross-validation appoach to see if this accuracy is robust when using multiple different training and testing sets.  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
