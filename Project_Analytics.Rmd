@@ -93,17 +93,25 @@ cred <- cred[,-1] # deleting the first useless column
 
 # Introduction {#Intro}
 
-**Parler de:**
-- méthode utilisée
-- grandes étapes
-- classification task (goal) =/= prediction
-- dire que c'est une *classification task*
-- [à compléter...]
+## Context
 
---> Exploration des données = 1st insight
---> Modelling: train/test set + selection du "meilleur" arbre(pruning)/svm(tuning)/NNET(nb of layers)/regression logicstic/K-NN(choisir K)/etc. + presentation de détail de tout ce bordel
---> Cross-validation avec les meilleurs de chq models pour selectionner le grand gagnant...
+In this analysis, we aim at obtaining a model that may be used to determine if new applicants present a good or bad credit risk.
+To do this, we have at our disposal the *German Credit data* has data on 1000 past credit applicants, described by 30 variables. Each applicant is rated as Good or Bad.  
+The problem therefore consists in a classification task.
 
+## Methodology
+
+In order propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our data. Based on it, we will already be able to have some assumptions about which variables might be the most important one.
+Then, we continue by the modelling part. To present a decent amount of details, we first use different models that we present extensively, using a train set / test set approach to be able to compute the accuracy. Then, we tune them using a cross-validation for selection the best parameters.  
+Thus, we are able to prune the trees, select the best costs for SVM, the number of neurones and decay for the neural network, the K for the K-Nearest Neighboor etc. 
+Furthermore, using a cross-validation approach on the previously tuned models, we put all of them into competition to be able to select the model that, considering our dataset, leads to the best predictions.   
+Finally, we come with some conclusions and recommendations for the final user. 
+
+
+
+
+
+** A COMPLETER **
 --> Description des variables (comme ca c'est plus simple de s'en sortir?!)
 
 
@@ -1001,44 +1009,6 @@ tab.boo.retained <- table(Reality = cred.test$response,
 ```
 
 The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` compared to the previous models. However, this accuracy has been built only on one unique testing set. We will later use a cross-validation appoach to see if this accuracy is robust when using multiple different training and testing sets.  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
