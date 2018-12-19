@@ -694,7 +694,7 @@ tab.nnet.retained %>% kable(
 ```
 
 We obtain a final accuracy of `r round(acc.nnet.retained,3)` on our testing set. 
-Note that this accuracy is different from the one using the cross-validation before. Here, we use only one test set that may be disproportioned. We will, at the end, use again a cross-validation for all models on the same train and test sets in order to compare the different models.  ???  
+Note that this accuracy is different from the one using the cross-validation before. Here, we use only one test set that may be disproportioned. We will, at the end, use again a cross-validation for all models on the same train and test sets in order to compare the different models.  
 
 
 ## Support Vector Machine {#SVM}
@@ -750,13 +750,13 @@ svm.model.retained <-
        cost = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C)
 
 # Predictions on the test set:
-pred.svm.retained <- predict(nnet.model.retained, cred.test, type="class") ???nnet.model.retained
+pred.svm.retained <- predict(svm.model.retained, cred.test, type = "class")
 
 # Confusion matrix
 tab.svm.retained <- table(Reality = cred.test$response, 
                            Predicted = unlist(pred.svm.retained)) 
 # Accuracy
-acc.svm.retained <- accuracy(tab.nnet.retained) ???same
+acc.svm.retained <- accuracy(svm.nnet.retained) 
 ```
 
 We can build the confusion matrix and see how the model performs.
