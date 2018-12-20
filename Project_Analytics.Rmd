@@ -1136,6 +1136,7 @@ Defining *train_control*, we will be able to use the same split between testing 
 Let's run the cross-validation on each model that we previously tuned. 
 
 ```{r, results = 'hide'}
+set.seed(1)
 train_control <- trainControl(method = "cv", number = 10)
 
 rpart_cv <- train(form = response~ .,
@@ -1190,12 +1191,19 @@ boo_cv <- train(form = response ~ .,
                  trControl = train_control)
 ```
 
-Now that all the models are built, it is possible to extract the accuracy of all of them.
+Now that all the models are built, it is possible to extract all their relevant information, to analyze their results and to opt for a specific model.
 
-```{r}
-accuracies <- data.frame(RPART = rpart_cv$results$Accuracy, NNET = nnet_cv$results$Accuracy,
-                         SVM = svm_cv$results$Accuracy, KNN = knn_cv$results$Accuracy, 
-                         RF = rf_cv$results$Accuracy, Boosting = boo_cv$results$Accuracy)
+# Results analysis and discussion
+
+The first thing that we can do is to compute the accuracies of all of our models.
+
+```{r, echo = FALSE}
+accuracies <- data.frame(RPART = rpart_cv$results$Accuracy, 
+                         NNET = nnet_cv$results$Accuracy,
+                         SVM = svm_cv$results$Accuracy, 
+                         KNN = knn_cv$results$Accuracy, 
+                         RF = rf_cv$results$Accuracy, 
+                         Boosting = boo_cv$results$Accuracy)
 
 accuracies %>% kable(caption = "Accuracies of the different models",
                      col.names = c("Rpart", "NNET", "SVM",
@@ -1214,8 +1222,9 @@ Based on these measure of accuracy only, we can see that the model providing the
 Based only on this measure, we would select this one. However, we can go further in the analysis by considering the confusion matrices of each model.
 
 
-```{r}
+```{r, echo = FALSE, results = 'asis'}
 models <- c("rpart_cv","svm_cv","knn_cv","rf_cv","boo_cv")
+
 
 for (i in 1:length(models)) {
 print(confusionMatrix(models[i] %>% get)$table %>% 
@@ -1238,7 +1247,6 @@ print(confusionMatrix(models[i] %>% get)$table %>%
 
 
 
-# Discussion
 
 
 # References
