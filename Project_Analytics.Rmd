@@ -107,15 +107,6 @@ Thus, we are able to prune the trees, select the best costs for SVM, the number 
 Furthermore, using a cross-validation approach on the previously tuned models, we put all of them into competition to be able to select the model that, considering our dataset, leads to the best predictions.   
 Finally, we come with some conclusions and recommendations for the final user. 
 
-
-
-
-
-** A COMPLETER **
---> Description des variables (comme ca c'est plus simple de s'en sortir?!)
-
-
-
 # Exploratory analysis {#Exp}
 
 ## Explanatory variables {#Exp2}
@@ -172,7 +163,7 @@ c(summary(cred$history)) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
-    position = "float_left"
+    position = "l"
   )
 
 table(cred$history) %>% 
@@ -1193,7 +1184,9 @@ boo_cv <- train(form = response ~ .,
 
 Now that all the models are built, it is possible to extract all their relevant information, to analyze their results and to opt for a specific model.
 
-# Results analysis and discussion
+# Conclusion
+
+## Results analysis and discussion
 
 The first thing that we can do is to compute the accuracies of all of our models.
 
@@ -1218,36 +1211,81 @@ accuracies %>% kable(caption = "Accuracies of the different models",
 ```
 
 
-Based on these measure of accuracy only, we can see that the model providing the best accuracy is the `r names(which.max(accuracies))`.  
-Based only on this measure, we would select this one. However, we can go further in the analysis by considering the confusion matrices of each model.
+Based on these measures of accuracy only, we can see that the model providing the best accuracy is the `r names(which.max(accuracies))`.  
+We have to mention that these results, that are close to 0.75, are not exceptional considering the repartition of our initial data. Indeed, in our initial database, there are 70% of "good" clients and only 30% of "bad" clients. Therefore, using a naive approach predicting "good" for everyone, we would already have had an accuracy of 0.7. Our analysis therefore only help us to improve our performance from 5 points of percents.  
+However, we have to mention that the improvement for the bank is still enormous as, using the naive approach that we suggested, credits would be accorded to all of the "bad" customers which could have dramatic consequences for the bank.  
+Our models consider the individual characteristics of all of the clients and make a decision individually. Therefore, we have less *FALSE POSITIVES*, meaning that we are able to better detect the clients that are qualified as "bad" and to which the bank doesn't want to rent money as there is a high risk of not reimbursing the credit.  
+Indeed, giving a credit to a client that will not reimburse it has much more dramatic consequences (the bank will loose all or only a part of the rented money) as not giving a credit to someone that would have reimburse it (the bank would only "not win" the interests).   
+More specifically, in our case, the *sensitivity* (probability of predicting "bad" when the client is indeed a "bad" one)  is more important than the *specificity* (probability of predicting "good for a client that is indeed "good").     
+Going further into that direction of having a particular focus at the clients that may not reimburse the money, we can look at the confusion matrices of each model rather than focusing only at the accuracy of each of them.  
 
 
 ```{r, echo = FALSE, results = 'asis'}
-models <- c("rpart_cv","svm_cv","knn_cv","rf_cv","boo_cv")
+models <- c("rpart_cv", "nnet_cv", "svm_cv" ,"knn_cv", "rf_cv", "boo_cv")
 
 
 for (i in 1:length(models)) {
 print(confusionMatrix(models[i] %>% get)$table %>% 
         kable(caption = paste("Confusion matrix for the", models[i] , "model"),
-                   col.names = c("Predict bad", "Predict good")) %>%
+                   col.names = c("Real bad", "Real good")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
-    position = "l") %>%
+    position = "left") %>%
   column_spec(1, border_right = T, width = "5em") %>%
   column_spec(2, width = "6em") %>%
   column_spec(3, width = "6em"))
 }
 ```
 
+Based on these matrices, we will have to have a particular look at the elements on the bottom left hand corner as those are the *FALSE POSITIVE*, meaning that these instances are predicted as "good" but are in fact "bad" and will not reimburse the credit.  
+More specifically, we should look at the sensitivity of each model that will tell us, among the clients that are indeed bad, the probability that they are categorized as bad.  
+To do so, we created the two following functions to test the sensitivity of our models based on their confusion matrices.
 
---> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")?
---> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
---> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (**OU A LA FIN**)
+```{r}
+sensitivity <- function(x) {
+  x[1,1]/(x[1,1] + x[2,1])
+}
+specificity <- function(x) {
+  x[2,2]/(x[2,2] + x[1,2])
+}
+```
+
+We apply them to the matrices to get the most usefull informations:  
+
+```{r, results = 'asis'}
+for (i in 1:length(models)) {
+  print(data.frame(
+    Sensitivity = confusionMatrix(models[i] %>% get)$table %>% sensitivity,
+    Specificity = confusionMatrix(models[i] %>% get)$table %>% specificity,
+    Accuracy = confusionMatrix(models[i] %>% get)$table %>% accuracy,
+    FP_rate = confusionMatrix(models[i] %>% get)$table[2,1]
+  ) 
+  %>% 
+    kable(caption = paste("Main criterion of the", models[i], "model")) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = F,
+      position = "left")
+  )
+}
+```
 
 
+After having presented some of the criterion that might be considered in order to select the final model that will be used for the predictions in the future, we underlined the fact that accuracy, false positive rate and sensitivity are particularily important.  
 
+Thus, considering these different aspects, the **boosting model** seems to be an excellent choice.  
+Indeed, the accuracy is almost equivalent to the best one and is not statistically significantly different from it. However, the sensitivity linked to the boosting model is much more satisfying and outperforms the other models. We can make the same conclusion about the false positive rate which is lower.  
+As it is a really important aspect of our analysis, these aspect will tend to prime over an accuracy. 
 
+Therefore, considering all these measures and what has been said before, we would recommend the final user to go for the boosting model.
+
+## Going further
+
+At this point, we could find a performant model that leads to a high accuracy, which has been the main criterion all over our analysis. The problem is that this model doesn't predict the "bad" customers well and we could even say that, within the "bad" customer, we have a random predictor as we can only reach a sensitivity of 0.5.  
+Therefore, considering the concepts that we presented in the last section, it could be interesting to reconduct this analysis using other criterion, like a weighted accuracy giving more weights to the "bad" customers.  
+Working in this way with a weighted accuracy, all the tuning during our process of selecting the best models would potentially lead to new parameters and to better predict the "bad" instances in which we are particularily interested in.  
+Another approach that could be used is to separate the inital dataset into two different sets with the same number of "good" and "bad" customers (300 of each) to change the *a-priori* of predicting the most represented class. Using this method, the different build models will not favorize the "good" outcome which might increase the predictive capabilities of the prediction of "bad" customers.  
 
 # References
 
