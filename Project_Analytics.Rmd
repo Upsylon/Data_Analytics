@@ -152,17 +152,9 @@ data.frame(variable = names(cred),
 
 As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical.  
 
-More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
-We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likely to influence it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
+More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with the response variable.  
 
-**LUCA SI TU PEUX MODIFIER ICI EN FONCTION DE CE QUE TU AS RACONTé**
-
-```{r}
-plot_correlation(cred, type="all", title = "Correlation Graph") # Attention! Il faut seulement ploter avec les valeurs continues. Les catégoriques se feront avec le khi-2! Test de Wilkockson pour tester si les groupes sont différents (comme je le comprends, voir si une valeur cotinue a une influence sur l'outcome des groupes). Ensuite, faire des tests d'indépendance sur les discrètes pour voir si elles ont une influence sur les valeurs de réponse. 
-```
-
-
-In addition, we can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
+We can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
 
 ```{r, echo=FALSE}
 c(summary(cred$history)) %>% 
@@ -184,10 +176,7 @@ table(cred$history) %>%
   )
 ```
 
-
 &nbsp;  
-&nbsp;  
-
 
 However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
@@ -416,6 +405,8 @@ As already said, to better understand the link between the explanatory variable 
 
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE}
+
+cred$response <- as.factor(ifelse(cred$response == 1, "good", "bad")) 
 
 for(i in 1:(length(cred) - 1)){
   print(
