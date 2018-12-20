@@ -2,6 +2,7 @@
 title: "Project Data Anlytics"
 author: "Bron Luca, Grandadam Patrik"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
+bibliography: bibliography.bib
 output:
   html_document:
     toc: true
@@ -862,7 +863,7 @@ The first ensemble method that we will consider is the Random Forest. Considerin
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
 
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set." @boldi2 
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set."
 
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
@@ -1234,10 +1235,6 @@ print(confusionMatrix(models[i] %>% get)$table %>%
 --> Parler de accuracy en elle meme (0.72 pas top par rapport aux 0.7 de base si on prédit que "good")?
 --> Parler des bonnes predictions de 0 (c'est elles qui nous intéressent et prédire que 1 conduirait la banque à faire faillite)
 --> Parler **FALSE POSTIVIE** / FALSE NEGATIVE / TRUE POSITIVE / TRUE NEGATIVE (**OU A LA FIN**)
-
-
-
-
 
 
 
