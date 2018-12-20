@@ -27,4 +27,12 @@ The client gave us a data set
 
 # Exploratory Data Analysis
 
-# 
+# Modelling
+
+## Model accuracy
+Finding accuracy to be able to know which model would be best suited for treating other data sets
+
+# Recommendation
+
+
+# Conclusion
