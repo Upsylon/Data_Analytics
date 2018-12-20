@@ -101,7 +101,7 @@ The problem therefore consists in a classification task.
 
 ## Methodology
 
-In order propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our data. Based on it, we will already be able to have some assumptions about which variables might be the most important one.
+In order to propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our data. Based on it, we will already be able to have some assumptions about which variables might be the most important one.
 Then, we continue by the modelling part. To present a decent amount of details, we first use different models that we present extensively, using a train set / test set approach to be able to compute the accuracy. Then, we tune them using a cross-validation for selection the best parameters.  
 Thus, we are able to prune the trees, select the best costs for SVM, the number of neurones and decay for the neural network, the K for the K-Nearest Neighboor etc. 
 Furthermore, using a cross-validation approach on the previously tuned models, we put all of them into competition to be able to select the model that, considering our dataset, leads to the best predictions.   
@@ -360,7 +360,7 @@ As our final goal is to predict if a customer should be classified as a risky on
 Let's first have a look at its distribution:  
 
 ```{r, echo=FALSE}
-cred$response <- as.factor(ifelse(cred$response == 1, "good", "bad")) 
+
 ggplot(cred, aes(x = cred$response)) + 
   geom_bar(stat = "count", position = "dodge") +
   ggtitle(str_c("Barplot of the response variable")) +
@@ -370,6 +370,8 @@ ggplot(cred, aes(x = cred$response)) +
 ```
 
 ```{r, echo=FALSE}
+cred$response <- as.factor(ifelse(cred$response == 1, "good", "bad"))
+
 res <- rbind(table(response), 
              paste(round(prop.table(table(response)) * 100, 1), "%"))
 rownames(res) <- c("sample size", "proportion")
@@ -393,16 +395,28 @@ We will get to this later. First, after having presented each variables, it coul
 
 As already said, to better understand the link between the explanatory variable and the response variable, we can make multiple plot their respective interactions. It is possible to have first assumption of their behavior and to have guesses about their significiance. 
 
-
  
-```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE}
-
-cred$response <- as.factor(ifelse(cred$response == 1, "good", "bad")) 
-
-for(i in 1:(length(cred) - 1)){
-  print(
-    ggplot(cred, aes(
-      x = response, y = cred[, i] ,  group = response
+```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE, warning = FALSE}
+for (i in 1:(length(cred)-1)) {
+  if (range(cred[, i] < 5)) {
+    print(
+      ggplot(cred, aes(
+      x = cred[, i],  fill = response
+    )) +
+      geom_bar(position = "fill") +
+      xlab("Response variable") +
+      ylab(colnames(cred[i])) +
+      ggtitle(str_c(
+        "Interaction between\n ",
+        paste(colnames(cred[i]), "and the\n response variable")
+      )) +
+      my_theme()
+    )
+  } else
+  {
+    print(
+      ggplot(cred, aes(
+      x = response, y = cred[, i],  group = response
     )) +
       geom_boxplot() +
       xlab("Response variable") +
@@ -412,7 +426,8 @@ for(i in 1:(length(cred) - 1)){
         paste(colnames(cred[i]), "and the\n response variable")
       )) +
       my_theme()
-  )
+    )
+  }
 }
 ```
 
