@@ -709,11 +709,8 @@ This models aims at separating the feature space into higher dimensions, it sear
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
-<<<<<<< HEAD
-svm_parameters <- data.frame(C = seq(0.5, 5, 0.5)) #???
-=======
+
 svm_parameters <- data.frame(C = seq(0.5, 5, 0.5))
->>>>>>> f0e34c3ecce1aba849b78c6963725ec1b7678b91
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -864,7 +861,7 @@ We will consider two ensemble methods: the random forest and the bagging (Bootst
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." boldi2 ???
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." @boldi2 
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
 Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
@@ -887,8 +884,7 @@ rf_fit <- train(form = response ~ .,
 ```
 
 
-We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. ???je comprends pas la justification
-
+We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. 
 
 Now that we have built our model, we can select the optimal mtry to continue our analysis.  
 
@@ -913,7 +909,7 @@ rf.model.retained <-
                importance = TRUE)
 ```
 
-Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph. ???explications des trois couleurs?
+Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph.
 
 ```{r}
 plot(rf.model.retained)
