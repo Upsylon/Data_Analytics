@@ -6,7 +6,6 @@ output:
   html_document:
     toc: true
     toc_float: true
-bibliography: biblio.bib
 ---
 
  - [Introduction](#Intro)
@@ -86,7 +85,7 @@ my_theme <- function(base_size = 10, base_family = "sans"){
 }
 ```
 
-```{r echo = False}
+```{r, echo = FALSE}
 names(cred) <- tolower(names(cred)) # changing the name of the variable into lowercase
 cred <- cred[,-1] # deleting the first useless column
 ```
@@ -614,13 +613,15 @@ We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r c
 Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
 
 
-In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross Validation. 
+In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross-Validation. 
 
-
+For the following models, we will create a new variable to be able to easily to this cross Validation
 
 ```{r, results = "hide"}
 train_control <- trainControl(method = "cv", number = 5)
 ```
+
+We can now build the Neural Network.
 
 ```{r, results = "hide"}
 nnet_fit <- train(form = response~ .,
@@ -639,7 +640,7 @@ nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay # the decay maximi
 
 ### Model selection and predicting the values of the testing set
 
-We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay` which maximises the accuracy using a 5 fold CV. 
+We present you the characteristics of the model retained, with `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size` neurones in the hidden layer and a decay of `r nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$decay` which maximises the accuracy using a 5 fold cross-validation. 
 As usual, we trained the model and predict the values of the test set to be able to build the confusion matrix and to calculate the accuracy.  
 
 ```{r, results = 'hide'}
@@ -709,8 +710,8 @@ This models aims at separating the feature space into higher dimensions, it sear
 Again, we decide to use the *caret* package to be able to compare models with different costs. We will then select the best performing model and analyse it separately.  
 
 ```{r}
-
 svm_parameters <- data.frame(C = seq(0.5, 5, 0.5))
+
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -753,14 +754,13 @@ svm.model.retained <-
        cost = svm_fit$results[which.max(svm_fit$results$Accuracy),]$C)
 
 # Predictions on the test set:
-
 pred.svm.retained <- predict(svm.model.retained, cred.test, type = "class")
 
 # Confusion matrix
 tab.svm.retained <- table(Reality = cred.test$response, 
                            Predicted = unlist(pred.svm.retained)) 
 # Accuracy
-acc.svm.retained <- accuracy(svm.nnet.retained) 
+acc.svm.retained <- accuracy(tab.svm.retained) 
 ```
 
 We can build the confusion matrix and see how the model performs.
@@ -791,7 +791,7 @@ The following code will not be run each time we execute our evaluation of the di
 However, we ran it once to be able to evaluate which distance measure to select.  
 
 ```{r, eval = FALSE}
-knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel= "optimal")
+knn_parameters <- expand.grid(kmax = 2:30, distance = 1:5, kernel = "optimal")
 
 knn_fit <- train(form = response~ .,
                  data = cred,
@@ -861,7 +861,9 @@ We will consider two ensemble methods: the random forest and the bagging (Bootst
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compare to a global model that uses only few features). This gives more chance for extrapolation outside the training set." @boldi2 
+
+"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set." @boldi2 
+
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
 Using our caret package again as our most powerful tool enabling to build an easy and readable code, we will test different *mtry* which correspond to number of variables that we consider at each split of the tree. Therefore, at each split, we consider only some variables (while in a regular CART model, we consider all of them), what will lead the different trees to be uncorrelated and increase their prediction power. All other splitting concerns are handled directly with caret.  
@@ -869,22 +871,19 @@ Using our caret package again as our most powerful tool enabling to build an eas
 Finally, we will select the *mtry* that leads to the highest accuracy.  
 
 ```{r}
-rf_parameters <- data.frame(mtry = c(7:14))
-# note that we first tested a wider scope of values (from 0 to 1000)
-# and now present only the interval that leads to the best results
+rf_parameters <- data.frame(mtry = c(7:18))
+# note that we first tested a wider scope of values (from 0 to 1000 with bigger
+# increments) and now present only the interval that leads to the best results
 
 rf_fit <- train(form = response ~ .,
                  data = cred,
                  method = "rf",
-                 ntree = 500, 
+                 ntree = 200, 
                  tuneGrid = rf_parameters,
                  preProcess = "range",
                  trace = FALSE,
                  trControl = train_control)
 ```
-
-
-We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 500 trees. 
 
 Now that we have built our model, we can select the optimal mtry to continue our analysis.  
 
@@ -903,26 +902,31 @@ We can now analyse more in depth this model.
 rf.model.retained <- 
   randomForest(formula = response ~ .,
                data = cred.train, 
-               ntree = 500, 
+               ntree = 200, 
                tuneGrid = data.frame(
                  mtry = rf_fit$results[which.max(svm_fit$results$Accuracy),]$mtry),
                importance = TRUE)
 ```
 
-Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 500. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph.
+
+Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 200. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph that let us see that the errors become stable.
+
 
 ```{r}
 plot(rf.model.retained)
 ```
 
+
+We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 200 trees which is larger than 100 to have some margin.
+
+<br>
+
 Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
-<<<<<<< HEAD
+
 However, unlike for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
-=======
-However, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.  
+It is still possible to see the individual contribution of each variables thanks to the variable importance plot.  
 One is based on the average decrease in impurity a variable provide, the other is based on how bad the prediction becomes if the variable is shuffled. An important variable will in average decrease a lot the impurity of a tree either because it is often selected or because each time it provides a good split.   Also, if the variable is important, giving to the model an incorrect value of this variable should decrease a lot the prediction quality.  
-Therefore, in the following graph, the important variables are on the first lines of the graph and confirm what we have already assumed previously in our analysis concerning the important variables.  
->>>>>>> f0e34c3ecce1aba849b78c6963725ec1b7678b91
+Therefore, in the following graph, the important variables are on the first lines of the graph and confirm what we have already assumed previously in our analysis concerning the important variables.
 
 
 ```{r}
@@ -945,7 +949,7 @@ acc.rf.retained <- accuracy(tab.rf.retained)
 
 ```{r}
 tab.rf.retained %>% kable(
-  caption = "Confusion matrix of the fitted SVM model",
+  caption = "Confusion matrix of the fitted RF model",
   col.names = c("Predict good", "Predict bad")) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
@@ -1014,6 +1018,21 @@ pred.boo.retained <- ifelse(
 tab.boo.retained <- table(Reality = cred.test$response, 
                            Predicted = pred.boo.retained) 
 ```
+
+```{r}
+tab.boo.retained %>% kable(
+  caption = "Confusion matrix of the fitted boosting model",
+  col.names = c("Predict good", "Predict bad")) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = F,
+    position = "l"
+  ) %>%
+  column_spec(1, border_right = T, width = "5em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "6em")
+```
+
 
 The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` compared to the previous models. However, this accuracy has been built only on one unique testing set. We will later use a cross-validation appoach to see if this accuracy is robust when using multiple different training and testing sets.  
 
@@ -1152,7 +1171,7 @@ knn_cv <- train(form = response~ .,
 rf_cv <- train(form = response ~ .,
                  data = cred,
                  method = "rf",
-                 ntree = 500, 
+                 ntree = 200, 
                  tuneGrid = data.frame(
                    mtry=rf_fit$results[which.max(rf_fit$results$Accuracy),]$mtry),
                  preProcess = "range",
@@ -1188,6 +1207,7 @@ accuracies %>% kable(caption = "Accuracies of the different models",
   column_spec(6, width = "6em")
 
 ```
+
 
 Based on these measure of accuracy only, we can see that the model providing the best accuracy is the `r names(which.max(accuracies))`.  
 Based only on this measure, we would select this one. However, we can go further in the analysis by considering the confusion matrices of each model.
