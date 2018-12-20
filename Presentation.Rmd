@@ -22,7 +22,7 @@ Analyse data to predict whether a new applicant for a credit is going to be good
 
 The client gave us a data set
 - 1000 observations
-- 30 variables
+- 30 variables <!-- some numericals, categorical, binary -->
 - Rating of each applicant as response variable
 
 # Exploratory Data Analysis
