@@ -24,3 +24,7 @@ The client gave us a data set
 - 1000 observations
 - 30 variables
 - Rating of each applicant as response variable
+
+# Exploratory Data Analysis
+
+# 
