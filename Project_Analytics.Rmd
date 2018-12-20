@@ -24,8 +24,6 @@ output:
  - [Cross-validation Approach](#CV)
  - [Discussion](#Disc)
 
-**LE CODE EN COMMENTAIRE, C'EST JUSTE POUR POUVOIR KNIT PLUS VITE!!** (avec cache = TRUE, ca re-run pas le code, mais le markdown doit quand meme compiler les graphes, du coup ca prend du temps à chq fois...)
-
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -123,7 +121,7 @@ sum(is.na(cred)) # checking if we have missing data
 
 Then, we get a first glance at the data.
 
-```{r}
+```{r, echo = FALSE}
 data.frame(variable = names(cred),
            classe = sapply(cred, typeof),
            first_values = sapply(cred, 
@@ -141,7 +139,7 @@ data.frame(variable = names(cred),
 
 &nbsp;
 
-As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical.  
+As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical. Only the variable *num_dependent* is binary whereas it has been described as numerical.  
 
 More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with each other. Thanks to a correlation plot, we can see the correlation between each pair of variable, but especially their correlation with our response variable in which we are interested in.  
 We see for instances that variables like *chk_acct*, *duration*, *history*, *sav_accnt* or *rent* are highly correlated (positively or negatively) with our outcome variable and that they will be likely to influence it in the models that we are going to plot. Others like *present_resident* or *retaining* should have low impact.  
@@ -163,7 +161,7 @@ c(summary(cred$history)) %>%
   kable_styling(
     bootstrap_options = c("striped", "hover", "condensed"),
     full_width = F,
-    position = "l"
+    position = "float_left"
   )
 
 table(cred$history) %>% 
@@ -182,7 +180,7 @@ table(cred$history) %>%
 
 However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
-```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE}
+```{r, fig.height=3, fig.width=3, warning=FALSE, cache=TRUE, echo = FALSE}
 
 for (i in 1:(length(cred)-1)) {
   if (range(cred[, i] < 5)) {
@@ -240,6 +238,7 @@ which(age > 100) %>% kable(caption="Position of instance with age > 100") %>%
 ```
 
 &nbsp;  
+&nbsp;  
 
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
@@ -260,7 +259,8 @@ It could therefore be possible to replace it at random with different probabilit
 We prefer to opt for the median (equal to `r median(age[age!=max(age)])`) to replace our problematic value as it offers more convenience.  
 Note that for calculating the median, our problematic value should not be used.  
 
-```{r}
+```{r, eval = FALSE}
+# we do not run this code after a discussion with the client
 cred$age[which(age>75)] <- median(age[age!=max(age)])
 ```
 
@@ -302,8 +302,9 @@ edu %>% kable(caption = "Frequency table of education", align = 'c') %>%
 
 It is indeed more appropriate to replace our value by 0 as the probability of belonging to this class is close to 20 times bigger.  
 
-```{r}
-cred$education[which(education == -1)] <- 0
+```{r, eval = FALSE}
+# we do not run this code after a discussion with the client
+cred$education[which(education == -1)] <- 0 
 ```
 
 &nbsp;  
@@ -335,7 +336,8 @@ ggplot(cred, aes(x = cred$guarantor)) +
 
 Again, for the same reasons, it is preferable to replace the wrongly recorded data by 0.  
 
-```{r}
+```{r, eval = FALSE}
+# we do not run this code after a discussion with the client
 cred$guarantor[which(guarantor == 2)] <- 0
 ```
 
@@ -343,8 +345,8 @@ cred$guarantor[which(guarantor == 2)] <- 0
 
 Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
 However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
-He told us that:
-    - $Age = 75  
+He told us that:  
+    - $Age = 75
     - Education = 1
     - Guarantor = 1$  
 
@@ -567,10 +569,15 @@ We can visualize this new pruned tree that is much smaller and therefore less co
 
 ### Predicting the values of the testing set
 
-```{r, comment=NA}
-pred.cart <- predict(cart.pruned, newdata = cred.test, type = "class")
+Now, we will use the model to predict the values of the testing set.  
 
-# confusion matrix:
+```{r, comment = NA}
+pred.cart <- predict(cart.pruned, newdata = cred.test, type = "class")
+```
+
+Then, we can appreciate the following confusion matrix of the model.  
+
+```{r, echo = FALSE, comment = NA}
 cart.tab <- table(Predictions = pred.cart, Observations = cred.test$response) 
 cart.tab %>% kable(caption = "Confusion matrix for the CART model",
                    col.names = c("Predict bad", "Predict good")) %>%
@@ -596,7 +603,9 @@ It is possible to have more informaion, with for instance the sum of each rows w
 CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
 ```
 
-We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good. 
+We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good.  
+
+Then, we will consider our next model which is the neural network.  
 
 ## Neural Network {#NN}
 
@@ -624,6 +633,11 @@ nnet_fit <- train(form = response~ .,
                  trace = FALSE,
                  method = "nnet")
 
+```
+
+Actually, multiple models have been built with the different *sizes* and *decay* considered. Thus 36 models have been created (number of different sizes multiplied by number of tested decay). Among all these models, we will have to select the best one. We tune the model. Thus, we plot the accuracy resulting from the different models according to the different sizes and decay tested. We then select the size and decay that maximise the accuracy.  
+
+```{r}
 plot(nnet_fit)
 nnet_fit$results
 nnet_fit$results[which.max(nnet_fit$results$Accuracy),]$size # the size maximizing the accuracy
@@ -657,7 +671,7 @@ acc.nnet.retained <- sum(ifelse(
   length(cred.test$response) 
 ```
 
-In addition, we can plot our neural network:
+In addition, we can plot our retained neural network:
 
 ```{r, comment = NA, fig.width=10, fig.height=10, echo=FALSE}
 # plot
@@ -703,7 +717,6 @@ Again, we decide to use the *caret* package to be able to compare models with di
 
 ```{r}
 svm_parameters <- data.frame(C = seq(0.5, 5, 0.5))
-
 # note that we first tested a wider scope of values (from 0 to 1000)
 # and now present only the interval that leads to the best results
 
@@ -757,7 +770,7 @@ acc.svm.retained <- accuracy(tab.svm.retained)
 
 We can build the confusion matrix and see how the model performs.
 
-```{r}
+```{r, echo = FALSE}
 tab.svm.retained %>% kable(
   caption = "Confusion matrix of the fitted SVM model",
   col.names = c("Predict good", "Predict bad")) %>%
@@ -854,7 +867,7 @@ The first ensemble method that we will consider is the Random Forest. Considerin
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
 
-"A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set."
+A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set.
 
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
@@ -928,7 +941,7 @@ varImpPlot(rf.model.retained)
 
 Finally, we can predict the values of our testing set, build the confusion matrix and predict the accuracy. 
 
-```{r, echo = FALSE}
+```{r}
 # Predictions on the test set:
 pred.rf.retained <- predict(rf.model.retained, cred.test, type = "class") 
 
@@ -939,7 +952,7 @@ tab.rf.retained <- table(Reality = cred.test$response,
 acc.rf.retained <- accuracy(tab.rf.retained)
 ```
 
-```{r}
+```{r, echo = FALSE}
 tab.rf.retained %>% kable(
   caption = "Confusion matrix of the fitted RF model",
   col.names = c("Predict good", "Predict bad")) %>%
@@ -998,7 +1011,7 @@ boo.model.retained <- gbm(as.numeric(cred$response)-1 ~.,
 
 Using this model, we can predict the instances of the testing set and build the corresponding confusion matrix.
 
-```{r, echo = FALSE}
+```{r}
 # Predictions on the test set:
 pred.boo.retained <- ifelse(
   predict(boo.model.retained, 
@@ -1011,7 +1024,7 @@ tab.boo.retained <- table(Reality = cred.test$response,
                            Predicted = pred.boo.retained) 
 ```
 
-```{r}
+```{r, echo = FALSE}
 tab.boo.retained %>% kable(
   caption = "Confusion matrix of the fitted boosting model",
   col.names = c("Predict good", "Predict bad")) %>%
@@ -1064,7 +1077,7 @@ for (i in 1:10){
 
 For example, *test.list[[1]]* is a data set of 300 rows taken at random from our data.
 
-```{r} 
+```{r, echo = FALSE} 
 test.list[[1]] %>% kable(caption="Our first test set named test.list[[1]]") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = F) %>%
@@ -1083,7 +1096,7 @@ We have already built our 10 different training set and we will use them to make
 
 ### CART Model
 
-```{r, results = 'hide'}
+```{r, results = 'hide', echo = FALSE}
 # creating an empty vector to store the accuracy of each iteration
 acc.cart.cv <- numeric(10) 
 
@@ -1251,9 +1264,9 @@ specificity <- function(x) {
 }
 ```
 
-We apply them to the matrices to get the most usefull informations:  
+We apply them to the matrices to get the most usefull informations that we present in the following tables:  
 
-```{r, results = 'asis'}
+```{r, results = 'asis', echo = FALSE}
 for (i in 1:length(models)) {
   print(data.frame(
     Sensitivity = confusionMatrix(models[i] %>% get)$table %>% sensitivity,
