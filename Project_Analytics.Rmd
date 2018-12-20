@@ -22,7 +22,7 @@ output:
     - [K-Nearest Neighbors](#KNN)
     - [Ensemble methods](#EM)
  - [Cross-validation Approach](#CV)
- - [Discussion](#Disc)
+ - [Conclusion](#CCL)
 
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -1188,7 +1188,7 @@ boo_cv <- train(form = response ~ .,
 
 Now that all the models are built, it is possible to extract all their relevant information, to analyze their results and to opt for a specific model.
 
-# Conclusion
+# Conclusion{#CCL}
 
 ## Results analysis and discussion
 
