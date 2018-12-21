@@ -865,15 +865,15 @@ Given our confusion matrix, on our initial testing set, the obtained accuracy is
 
 Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a poor predictive power.  
 However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
-We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
+We will consider two ensemble methods: the random forest and the boosting.
 
 ### Random Forest 
 
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
-Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
+In the random forest, the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
 
-A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set.
+A central reason of the efficiency of random forest is that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set. @boldi
 
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
@@ -977,7 +977,7 @@ Using the Random Forest, we obtain a final accuracy of `r acc.rf.retained` on th
 
 ### Boosting
 
-The second ensemble method that we consider is boosting. Again, the goal of using this technique is to increase the predictive power of the learners. It consists of constructing a separate decision tree at each iteration of the process with the goal to improve and improve each the fitted trees at each iteration. In the end, the prediction will be the one that will be the most predicted by the different trees in average.  
+The second ensemble method that we consider is boosting. Again, the goal of using this technique is to increase the predictive power of the learners. It consists of constructing a separate decision tree at each iteration of the process with the goal to improve and improve the fitted trees at each iteration. In the end, the prediction will be the one that will be the most predicted by the different trees in average.  
 
 We begin by using, as usual, the caret package and create a grid to test different values for the parameters. Using a cross-validation procedure, we will then select the parameters that lead to the highest accuracy. 
 
