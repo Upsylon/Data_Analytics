@@ -92,18 +92,18 @@ cred <- cred[,-1] # deleting the first useless column
 # Introduction {#Intro}
 
 ## Context
-
+Our client is a financial institution who wants to use statistical methods and machine learning to improve their process.   
 In this analysis, we aim at obtaining a model that may be used to determine if new applicants present a good or bad credit risk.
-To do this, we have at our disposal the *German Credit data* has data on 1000 past credit applicants, described by 30 variables. Each applicant is rated as Good or Bad.  
-The problem therefore consists in a classification task.
+To do this, we have at our disposal the *German Credit data*. A dataset on 1000 past credit applicants, described by 30 variables. Each applicant is rated as Good or Bad.  
+The task is therefore learning from those past data to build model that would correctly rate the new clients.
 
 ## Methodology
 
-In order to propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our data. Based on it, we will already be able to have some assumptions about which variables might be the most important one.
-Then, we continue by the modelling part. To present a decent amount of details, we first use different models that we present extensively, using a train set / test set approach to be able to compute the accuracy. Then, we tune them using a cross-validation for selection the best parameters.  
-Thus, we are able to prune the trees, select the best costs for SVM, the number of neurones and decay for the neural network, the K for the K-Nearest Neighboor etc. 
+In order to propose an optimal model that could be used for predictions, we begin with an explanatory analysis to better understand our dataset. Based on it, we will already be able to have some assumptions about which variables might be the most important ones.
+Then, we continue with the modelling part. To present a decent amount of details, we first use different models that we present extensively, using a train set / test set approach to be able to compute the accuracy. Then, we tune them using a cross-validation for selecting the best parameters.  
+Thus, we are able to prune the trees, select the best costs for SVM, the number of neurones and decay for the neural network, the K for the K-Nearest Neighboor etc.
 Furthermore, using a cross-validation approach on the previously tuned models, we put all of them into competition to be able to select the model that, considering our dataset, leads to the best predictions.   
-Finally, we come with some conclusions and recommendations for the final user. 
+Finally, we come with some conclusions and recommendations for our client. 
 
 # Exploratory analysis {#Exp}
 
@@ -119,6 +119,7 @@ First, we check if there is missing values.
 sum(is.na(cred)) # checking if we have missing data
 ```
 
+As stated by the client, there is no missing values.  
 Then, we get a first glance at the data.
 
 ```{r, echo = FALSE}
@@ -139,11 +140,11 @@ data.frame(variable = names(cred),
 
 &nbsp;
 
-As we can see, the data are coherent with the infos that "the client" provided us. Most of them are binary or categorical, while only few are numerical. Only the variable *num_dependent* is binary whereas it has been described as numerical.  
+As we can see, the data are coherent with the infos that the client provided us. Most of them are binary or categorical, while only few are numerical.
 
-More than seeing the first values of our variables and their types, we also need to understand how distributed they are and their link with the response variable.  
+More than just seeing the first values of our variables and their types, we also need to understand how distributed they are and their links with the response variable.  
 
-We can appreciate the summary of the different variables. The frequency table of *history* is presented below as an example:  
+We can appreciate the summary of the different variables. The summary and frequency table of *history* are presented below as an example:  
 
 ```{r, echo=FALSE}
 c(summary(cred$history)) %>% 
@@ -164,8 +165,7 @@ table(cred$history) %>%
     full_width = F
   )
 ```
-
-&nbsp;  
+&nbsp;
 
 However, presenting such a summary for all variables can be long and boring. It can be better to represent these number visually. A boxplot is optimal to get all the important values for the numerical data, while a barplot will give us strong insights for categorical data. Let's appreciate the following graphs:  
 
@@ -202,11 +202,12 @@ for (i in 1:(length(cred)-1)) {
 
 Thanks to these graphs, we can better understand our data at a glance and will be able to refer to them when needed.  
 
-In addition, these graphs enable us too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ were recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
-In addition, we can also have strong suspitions that the variable *age* has wrongly recorded data as we can see an outlier with a value much bigger than 100.  
+In addition, these graphs enable us too see that some data are not tidy. For instance, *education* should be a binary variable. However, we can see on the histogram of this variable that we have data where $-1$ was recorded. We have the same problem for the binary variable *guarantor* were a value $2$ is present.  
+In addition, we can also have strong suspicions that the variable *age* was a wrongly recorded data as we can see an outlier with a value much bigger than 100.  
 We will have to confirm our first assumptions and to modify these dirty data in an appropriate way.  
 
 Let's first look at our variable *age*. We assume that, generally, a person will not live more than a hundred year, and will not contract a credit at such age. This is why the data with $Age > 100$ are most likely wrongly recorded. We will therefore have to replace them in our database.  
+
 First, we have to find how much data are potentially dirty according to our assumptions and to localise them in order to replace them.  
 
 
@@ -225,9 +226,7 @@ which(age > 100) %>% kable(caption="Position of instance with age > 100") %>%
                 full_width = F, position = "left") %>%
   column_spec(1, width = "9.5em") 
 ```
-
-&nbsp;  
-&nbsp;  
+&nbsp;
 
 According to our results, we have one data with $age > 100$ that has to be replaced. It is the instance `r which(age>100) ` and its value is `r age[which(age>100)]`.  
 
@@ -255,9 +254,9 @@ cred$age[which(age>75)] <- median(age[age!=max(age)])
 
 An alternative could have been to use the mean, but, as we have no really big outlier, both values would have been close to each other ($mean = `r mean(age)`$ while $median = `r median(age)`$). 
 
-&nbsp;  
+<hr>  
 
-Next, we also have to deal with our two categorical data that have been wrongly recorded:  
+Next, we also have to deal with our two binary data that have been wrongly recorded:  
     - one in *education*  
     - one in *guarantor*
 
@@ -296,9 +295,9 @@ It is indeed more appropriate to replace our value by 0 as the probability of be
 cred$education[which(education == -1)] <- 0 
 ```
 
-&nbsp;  
+<hr>
 
-Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well:  
+Concerning the variable *guarantor*, we can look at the frequency table and plot the barplot as well: 
 
 ```{r, echo = FALSE}
 gua <- rbind(table(guarantor), 
@@ -330,14 +329,12 @@ Again, for the same reasons, it is preferable to replace the wrongly recorded da
 cred$guarantor[which(guarantor == 2)] <- 0
 ```
 
-<br>
+<hr>
 
 Finding the most likely replacement value comes from the idea that we try to find a replacement value which is going to be the least disruptive possible so that it does no interfere with the modelling that will be done later.  
-However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.
+However, this methodonly works if we have a big enough dataset such that the corrected value will not have a big impact if its replacement value is far from the observed one. Though, it will never be as good as asking directly what is the real value of the erroneous data and that is why we called our client to ask what they were.  
 He told us that:  
-    - $Age = 75
-    - Education = 1
-    - Guarantor = 1$  
+$Age = 75 / Education = 1 / Guarantor = 1$  
 
 ```{r}
 cred$age[which(age>75)] <- median(age[age!=max(age)])
@@ -345,13 +342,15 @@ cred$education[which(education == -1)] <- 1
 cred$guarantor[which(guarantor == 2)] <- 1
 ```
 
-<br>
+<hr>
 
 In addition, the variable *present_resident* is also problematic as it doesn't have the same range as the other categorical values. Its range goes from `r min(range(present_resident))` to `r max(range(present_resident))` whereas it should go from 0 to 3 like the other ones. We can modifiy its values in order to have the same format everywhere.
  
 ```{r}
 cred$present_resident <- subtract(cred$present_resident, 1)
 ```
+
+<hr>
 
 These first steps have enabled us to better understand our explanatory variables and to clean the problematic ones.  
 We now have to focus in detail to the response variable on which the predictions should be made.   
@@ -391,11 +390,12 @@ Without any calculations, the bank has more chances to be octroying a credit to 
 However, the consequences can be really dramatic if 30% of the credits that the bank gives are not totally reimbursed. That's why we have to develop a model to improve this initial accuracy that is obtained using a naive method of always octroying a credit.   
 Optimally, this model should also minimise the number of credits that are predicted as "good" and that are actually "bad" as the consequences for the bank (reimbursement of the credit by the customer) can be much more dramatic in this situation than in a situation where a "good" credit is predicted as "bad".  
 
-We will get to this later. First, after having presented each variables, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
+We will talk about this later. First, after having presented each variables, it could be interesting to see if we can already have some assumptions concerning the relations between the explanatory variables and the response variable.
 
 ## Interactions between the explanatory variables and the response variable {#Exp4}
 
-As already said, to better understand the link between the explanatory variable and the response variable, we can make multiple plot their respective interactions. It is possible to have first assumption of their behavior and to have guesses about their significiance. 
+As already said, to better understand the link between the explanatory variable and the response variable, we can make multiple plot their respective interactions. It is possible to have first assumption of their behavior and to have guesses about their significiance.  
+We build boxplot for numerical variables and barplots for the rest.
 
  
 ```{r, fig.width=3, fig.height=3, cache=TRUE, echo=FALSE, warning = FALSE}
@@ -433,9 +433,9 @@ for (i in 1:(length(cred)-1)) {
 }
 ```
 
-Based on these graphs, we can already have first insights about which variables might impact the response variable. Indeed, when the boxplots are well separated from each other like for the variable *chk_acct*, we might conclude that the variable will be important in our analysis as it well discriminates the response. However, we can not take any conclusion about the importance of variables where the boxplots are not well separated.
+Based on these graphs, we can already have first insights about which variables might impact the response variable. One the one hand, the boxplots are generally not well separated. Most of the size of the box are overlapping when comparing the response variables which means it is hard to discriminate them according to their response variable. On the other hand, when the bars of the barplots display different proportions like for the variable *chk_acct*, we might conclude that the variable will be important in our analysis as it well discriminates the response. However, we can not take any conclusion about the importance of variables when the barplots does not display significant differences of proportions of "good" and "bad". 
 
-
+At this point, we already have some hints of what variables would matter in our analysis and therefore be able to remove the most unimpactful from our analysis, but since the model that we use have good methods to finding the right variables, we keep them all in case it could improve their predictions capacities.
 
 
 # Modelling {#Mod}
@@ -459,7 +459,7 @@ str(cred)
 Before beginning to work on our different models, we can create a test set and a training set in order to build the models. This procedure is used in order to avoid overfitting and to predict instances which have been used while building the model.  
 We opt for a size of 70% of the original dataset for the training set and a size of 30% of the original dataset for the testing set.  
 In order to evaluate the performance of the different models, we will have to use the exact **same training and test sets** for each model to be sure that the performance differences will result from the model we use and not from the randomess of splitting differently both sets.   
-A cross-Validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
+A cross-validation will be performed at the end in order to compare the different models and to choose which one should be used to make good predictions.  
 
 ```{r}
 # Creation of testing and training sets
@@ -470,7 +470,7 @@ cred.test <- cred[-index.train,]
 ```
 
 
-In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long. We prefer to build a function to be able to retrieve at any time based on a confusion matrix:  
+In addition, to evaluate our models, we will use the accuracy as main measure of performance. However, computing the accuracy for each model can be quite long. We prefer to build a function to be able to retrieve it at any time based on a confusion matrix:  
 
 
 ```{r}
@@ -487,9 +487,8 @@ We can now begin to work on the different models that we will use in order to ma
 First, we begin our analysis by using a decision (classification) tree.   
 
 The goal of a decision tree is to predict the final class of our response variable ("good" or "bad") by using a succession of binary rules to apply to our data.   
-Each node is created thanks to an algorithm that aims to minimize an impurity criterion. The feature and its underlying value that maximises the impurity reduction (that "best splits" the dataset in two) will be selected. This procedure is repeated until a stopping rule is reached.  
-At the end, we will have multiple branches that will all lead to the final forecast that we will make for a given instances.  
-Better than words, let's compute the model and have a look at it.  
+Each node is created thanks to an algorithm that aims to minimize an impurity criterion. The feature and its underlying value that maximises the impurity reduction (that "best splits" the dataset in two) will be selected. This procedure is repeated until a stopping rule is reached. At the end, we will have multiple branches that will all lead to the final forecast that we will make for a given instance.  
+Better than words, let's compute the model and have a look at it!  
 
 ### Building the model
 
@@ -501,16 +500,16 @@ cart.model <- rpart(response ~ .,  data = cred.train, method = "class")
 rpart.plot(cart.model, main = "Original decision tree")
 ```
 
---> At this time, we have obtained a decision tree that can be used to do the predictions. At its nodes, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
-However, this tree is also really complex: there are a lot of splits and branches.  
+At this time, we have obtained a decision tree that can be used to do the predictions. At its nodes, one should look at the values of the data and take the appropriate direction till arriving at the last row, when the prediction can be made.  
+However, this tree is also really complex: there are a lot of splits and branches.
 We have to tune this initial model and make it more simple. We will simplify this model without loosing  predictive capabilities by pruning it, keeping only the most important splits linked to the most important variables.  
 
 ### Tuning the model: Pruning
 
 As already said, our complex tree has to be pruned in order to reduce its complexity. To do so, we will use the *1 - SE rule*.   
 The idea of this rule is really general. As one would establish a t-test in statistics to see if two measures are *statistically different*, the *1 - SE rule* tries to establish if two models produce statistically different results (if we can affirm that one outperforms the other).  
-We therefore consider the *xerror* (the criterion in which we are interested in and that we want to minimize) and its standard deviation *xstd*. A models that falls within 1 standard deviation of the most complex model can be considered as equivalent in term of performance. Therefore, using this rule, we will be able to prune the tree to get a much simplier model, without loosing in quality as the performance capability of our new model will be *statistically the same* as the first one.  
-To select the size of our pruned tree, we will look at the xerror of our original tree (the most complex one) and add one standard error *xstd*. We will then select the simplier tree with an xerror that lies within the calculated value.
+We therefore consider the *xerror* (the criterion in which we are interested in and that we want to minimize) and its standard deviation *xstd*. A models that falls within 1 standard deviation of the most accurate model can be considered as equivalent in term of performance. Therefore, using this rule, we will be able to prune the tree to get a much simpler model, without loosing in quality as the performance capability of our new model will be *statistically not different* as the first one.  
+To select the size of our pruned tree, we will look at the xerror of the most accurate tree. We will then select the simplest tree with an xerror that lies within the calculated interval of it.
 
 Let's have a look at these values from our original tree and decide where to prune it.
 
@@ -556,10 +555,10 @@ cp.pruned <-
                                 < sum.xe.xstd))), 1]
 ```
  
-Accoring to our first table, the minimal *xerror* is equal to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable) - 1]` , the minimal *xstd* to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable)]` and the sum of both is therefore equal to `r sum.xe.xstd`.  
+Accoring to our first table, the minimal *xerror* is equal to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable) - 1]`, the minimal *xstd* to `r cart.model$cptable[which.min(cart.model$cptable[,ncol(cart.model$cptable) -1]), ncol(cart.model$cptable)]` and the sum of both is therefore equal to `r sum.xe.xstd`.  
 
 The smallest tree with an xerror below this value is equal to `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), ncol(cart.model$cptable) - 1]` and we will therefore prune the tree at CP = `r cp.pruned`. According to our previous table, this represents `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), 2]  ` splits to be kept, equivalent to a tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))), 2] + 1  `.  
-It is also possible to observe this value on the graph where the dash line indicates the *xerror* plus its *xstd* from the most complex tree. We therefore select the less complex tree under this line, which is the tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  ` (or, again, with `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits).  
+It is also possible to observe this value on the graph where the dash line indicates the *xerror* plus its *xstd* from the most accurate tree. We therefore select the less complex tree under this line, which is the tree of size `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2] + 1  ` (or, again, the one with `r cart.model$cptable[(min(which(cart.model$cptable[,ncol(cart.model$cptable) -1] < sum.xe.xstd))),2]  ` splits).  
 
 We thus prune the tree at this value (the *R* function requires to indicate CP.)
 
@@ -596,7 +595,7 @@ cart.tab %>% kable(caption = "Confusion matrix for the CART model",
   column_spec(3, width = "6em")
 ```
 
-Based on this table, we can calculate the accuracy using our previously build function, and that calculates the element weel classified divided by the total number of elements.  
+Based on this table, we can calculate the accuracy using our previously build function, and that calculates the element well classified divided by the total number of elements.  
 
 ```{r}
 # accuracy using our previously build function
@@ -611,18 +610,17 @@ CrossTable(x = cred.test$response, y = pred.cart, prop.chisq = FALSE)
 
 We can see that `r cart.tab[1,1] + cart.tab[2,1]` are predicated as bad and `r cart.tab[1,2] + cart.tab[2,2]` are predicted as good.  
 
-Then, we will consider our next model which is the neural network.  
-
 ## Neural Network {#NN}
 
 ### Building the model and optimizing it: selecting the number of neurones in the hidden layer
+We know look at another model: the Neural Network.
 
-Some litterature suggests that one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer @heaton2008introduction.
+Some litterature suggests that "one should never use more than two hidden layers and that, for many practical problems, there is no reason to use any more than one hidden layer". @heaton2008introduction.
 
 
-In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold Cross-Validation. 
+In addition, "over-parametrization quickly lead to instability in the estimate and can lead to overfitting. One possibility is to impose a penalty on the largest weights during the optimization. This is called regularization and, more specifically in the context of neural network, weight decay." @boldi. Thus, the model that we are going to train will be a 1 layer Neural Network to which we will simulate different number of neurones and decay. The final model that we are going to choose will be the one that maximises the accuracy using a 5-fold cross-validation. 
 
-For the following models, we will create a new variable to be able to easily to this cross Validation
+For the following models, we will create a new variable to be able to easily to this cross-validation
 
 ```{r, results = "hide"}
 train_control <- trainControl(method = "cv", number = 5)
@@ -641,7 +639,7 @@ nnet_fit <- train(form = response~ .,
 
 ```
 
-Actually, multiple models have been built with the different *sizes* and *decay* considered. Thus 36 models have been created (number of different sizes multiplied by number of tested decay). Among all these models, we will have to select the best one. We tune the model. Thus, we plot the accuracy resulting from the different models according to the different sizes and decay tested. We then select the size and decay that maximise the accuracy.  
+Actually, multiple models have been built with the different *sizes* and *decay* considered. Thus, 36 models have been created (number of different size multiplied by number of tested decay). Among all these models, we will have to select the best one. We tune the model meaning that we plot the accuracy resulting from the different models according to the different sizes and decay tested. We then select the size and decay that maximise the accuracy.  
 
 ```{r}
 plot(nnet_fit)
@@ -751,8 +749,7 @@ According to our results and by having tested different costs, we conclude that 
 
 
 
-We can then "extract" this model and analyze it on his own. We have to note that, like the Neural Network, SVM doesn't allow for much interpretations. What matters here is the quality of the predictions more than the individual interpretability of the different variables.  
-In addition, to have a 2D graph, one should fix (slice) all other variables. Here, having 30 explanative variables, it does not make sense to fix 28 out of them and plotting is therefore not appropriate.  
+We can then "extract" this model and analyze it on his own. We have to note that, like the Neural Network, SVM doesn't allow for much interpretations. What matters here is the quality of the predictions more than the individual interpretability of the different variables. In addition, to have a 2D graph, one should fix (slice) all other variables. Here, having 30 explanative variables, it does not make sense to fix 28 out of them and plotting is therefore not appropriate.  
 
 However, we can look at the predictions of the model.
 
@@ -865,15 +862,15 @@ Given our confusion matrix, on our initial testing set, the obtained accuracy is
 
 Ensemble contains several learners (so called base learners or sub-learners) which are combined to build one learner called an ensemble learner. Taken individually, each learner has a poor predictive power.  
 However, the strength of ensemble methods lies in the fact that the final prediction will combine the results of each of these so-called *poor* models to create one final predictions that should outperforms usual prediction methods. Indeed, *overestimated* prediction will be compensated by *underestimated* prediction which will result in a final prediction that should be in average better than using only a regular model. 
-We will consider two ensemble methods: the random forest and the bagging (Bootstrap aggregating).
+We will consider two ensemble methods: the random forest and the bagging (Bootstrap AGGregatING).
 
-### Random Forest 
+### Random Forest {#RF}
 
 The first ensemble method that we will consider is the Random Forest. Considering its construction, the Random Forest is a really special model.  
 Indeed, the model is consisting in building a lot of trees with predictions that will be averaged to produce a final prediction.  
 Unlike the boosting, in the random forest the models will consist of many different trees with a set of features drawn at random at each split of the trees when growing them. In practice, the original data is split into a training and a testing set and M new training set of the same size as the original training set are built randomly (with replacement) from the original testing set. Then, on each training set, a tree is built with a random selection of variables used at each split. The final prediction will be the most predicted class based on all these small learners.  
 
-A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside the training set.
+A central reason of the efficiency of bagging was that the models predictions should be **uncorrelated**. Since all the models are in principle good, this uncorrelation will bring **stability** to the final prediction. For Random Forest, a consequence of forcing the exclusion of some features in some splits in some models is that the range of features used in the final prediction is enlarged (compared to a global model that uses only few features). This gives more chance for extrapolation outside of the training set.
 
 The goal of this process to built many small uncorrelated learners rather than one unique big learner to increase the predictive power of the model.  
 
@@ -920,7 +917,7 @@ rf.model.retained <-
 ```
 
 
-Note that we decide not to make vary *ntree*, the number of trees used in the Random Forest and this number has been set to 200. This is the default number and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph that let us see that the errors become stable.
+Note that we decide not to make *ntree* var, the number of trees used in the Random Forest. This number has been set to 200. This is the first number we tried and increasing it more would have a quasi null impact. We can verify this assumption thanks to the following graph that let us see that the errors become stable.
 
 
 ```{r}
@@ -930,13 +927,13 @@ plot(rf.model.retained)
 
 We see that the error rate remains really similar past a certain value (around 100), meaning that increasing the number of tree does not allow to increase the predictive capabilities anymore. The second derivative is negative and the decrease of the error rate becomes smaller and smaller the more trees we add. We therefore decide to stick to this initial value of 200 trees which is larger than 100 to have some margin.
 
-<br>
+<hr>
 
 Now that we have built our final model, contrarily to the regular CART, we can not directly see which variables are the most important looking at the branches of each tree.  
 
-However, unlike for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
+Unlike for the Neural Network or SVM, it is still possible to see the individual contribution of each variables thanks to the variable importance plot.
 It is still possible to see the individual contribution of each variables thanks to the variable importance plot.  
-One is based on the average decrease in impurity a variable provide, the other is based on how bad the prediction becomes if the variable is shuffled. An important variable will in average decrease a lot the impurity of a tree either because it is often selected or because each time it provides a good split.   Also, if the variable is important, giving to the model an incorrect value of this variable should decrease a lot the prediction quality.  
+One is based on the average decrease in impurity a variable provides, the other is based on how bad the prediction becomes if the variable is shuffled. An important variable will in average decrease a lot the impurity of a tree either because it is often selected or because each time it provides a good split.   Also, if the variable is important, giving to the model an incorrect value of this variable should decrease a lot the prediction quality.  
 Therefore, in the following graph, the important variables are on the first lines of the graph and confirm what we have already assumed previously in our analysis concerning the important variables.
 
 
@@ -1005,7 +1002,7 @@ plot(boo_fit)
 
 According to this graph, we should select `r boo_fit$results[which.max(boo_fit$results$Accuracy),]$n.trees` trees and a shrinkage of `r boo_fit$results[which.max(boo_fit$results$Accuracy),]$shrinkage`.  
 
-Using these parameters, we can compute the corresponding model with the *gmb* function and explore it more in details.  
+Using these parameters, we can compute the corresponding model with the *gbm* function (Generalized Boosted Regression Modeling) and explore it more in details.  
 
 ```{r}
 boo.model.retained <- gbm(as.numeric(cred$response)-1 ~., 
@@ -1056,16 +1053,13 @@ The boosting presents a quite high accuracy of `r accuracy(tab.boo.retained)` co
 At this point, let's make a summary of the situation.  
 Until now, we have built several different models and we have tuned them (selected their parameters), so the different models that we have are *the best SVM*, *the best Neural Network*, etc.  
 However, we still have to confront each model to be able to select the *overall winner*.  
-In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the good fit of the method with the test set.  
-To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold cross-validation.  
+In order to be able to compare them, we will not evaluate them only on a testing as evaluating the performance of the model once will not enable us to make any conclusions. For instance, if the concerned testing set is disproportionned, we could attribute the good score of a model to the predictive capabilities of the model while it comes in fact from the good fit of the method with the test set. To be sure that the score of the model are not impacted (too much) by the characteristics of the testing set, we will perform a 10-fold cross-validation.  
 With this technique, we will use 10 different training set and 10 different testing sets. Our original dataset will be split in 10, using at each iteration 1/10 of the original dataset as a testing set and the rest as a training set. Using this method, each instance will be once (and exactly once) in the testing set.  
 We will then be able to compute the accuracy on the different testing set for each iteration of the cross-validation and then evaluate the average accuracy which will represent the numbers that we can expect the model to classify correctly.  
 
 We will first make the whole procedure "manually" as an example and then use the famous *caret* package again to make the code as simple as possible.  
 
-Thus, we begin with a creation of 10 different sets in order to do the cross-Validation.  
-
-The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.  
+Thus, we begin with a creation of 10 different sets in order to do the cross-validation. The number of instances being `r nrow(cred)`, we will make 10 sets of size `r nrow(cred)/10`. They are stored in a list named test.list. At each step, the remaining part of the data base is stored in the list train.test.  
 
 ```{r}
 test.list <- list() # creates an empty list that will be the test sets
@@ -1096,9 +1090,9 @@ train.list[[1]] %>% kable(caption="Train set associated with test.list[[1]]") %>
   scroll_box(width = "100%", height = "200px")
 ```
 
-As already said, we first make the whole procedure on one model before using the caret package.  
-We choose to present in details the CART model tuned and pruned.  
-We have already built our 10 different training set and we will use them to make the predictions and calculate the accuracy of our 10 testing set. 
+<br>
+As already stated, we first make the whole procedure on one model before using the caret package.  
+We choose to present in details the CART model tuned and pruned. We have already built our 10 different training set and we will use them to make the predictions and calculate the accuracy of our 10 testing set. 
 
 ### CART Model
 
@@ -1131,7 +1125,7 @@ for (i in 1:10){
 }
 ```
 
-We can now extract what we are interested in: informations about the accuracy.
+We can now extract what we are interested in:
 
 ```{r}
 acc.cart.cv # the accuracies obtained on each testing set
@@ -1141,8 +1135,8 @@ sd(acc.cart.cv) # the standard deviation of the accuracies
  
 Here, we have an average accuracy for the *CART* model which is equal to `r mean(acc.cart.cv)` and that has a standard deviation of `r sd(acc.cart.cv)`. We see that, using a cross-validation, the accuracy obtained differ from the one using only the testing/training set approach. However, it is of course still really close to the previous one and within a range of one standard deviation, which was also completely predictable since the original train and test sets were also chosen at random.
 
-Now that we have seen in detail how the cross-validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us.   
-Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
+Now that we have seen in detail how the cross-validation works thanks to this hand-made code, we can prefer to use the caret package that will do the work for us. Defining *train_control*, we will be able to use the same split between testing and training set for all the models. We will thus be able to conclude that differences in the accuracy will indeed be the consequence of the predictive capabilities of the model, and not from a "bad" repartition of the instances in the two sets.  
+
 Let's run the cross-validation on each model that we previously tuned. 
 
 ```{r, results = 'hide'}
@@ -1203,7 +1197,7 @@ boo_cv <- train(form = response ~ .,
 
 Now that all the models are built, it is possible to extract all their relevant information, to analyze their results and to opt for a specific model.
 
-# Conclusion{#CCL}
+# Conclusion {#CCL}
 
 ## Results analysis and discussion
 
@@ -1231,9 +1225,9 @@ accuracies %>% kable(caption = "Accuracies of the different models",
 
 
 Based on these measures of accuracy only, we can see that the model providing the best accuracy is the `r names(which.max(accuracies))`.  
-We have to mention that these results, that are close to 0.75, are not exceptional considering the repartition of our initial data. Indeed, in our initial database, there are 70% of "good" clients and only 30% of "bad" clients. Therefore, using a naive approach predicting "good" for everyone, we would already have had an accuracy of 0.7. Our analysis therefore only help us to improve our performance from 5 points of percents.  
+We have to mention that these results are close to 0.75. They are not exceptional considering the repartition of our initial data. Indeed, in our initial database, there are 70% of "good" clients and only 30% of "bad" clients. Therefore, using a naive approach predicting "good" for everyone, we would already have had an accuracy of 0.7. Our analysis therefore only help us to improve our performance from 5 points of percentage.  
 However, we have to mention that the improvement for the bank is still enormous as, using the naive approach that we suggested, credits would be accorded to all of the "bad" customers which could have dramatic consequences for the bank.  
-Our models consider the individual characteristics of all of the clients and make a decision individually. Therefore, we have less *FALSE POSITIVES*, meaning that we are able to better detect the clients that are qualified as "bad" and to which the bank doesn't want to rent money as there is a high risk of not reimbursing the credit.  
+Our models consider the individual characteristics of all of the clients and make a decision individually. Therefore, we have less *False Positives*, meaning that we are able to better detect the clients that are qualified as "bad" and to which the bank doesn't want to rent money as there is a high risk of not reimbursing the credit.  
 Indeed, giving a credit to a client that will not reimburse it has much more dramatic consequences (the bank will loose all or only a part of the rented money) as not giving a credit to someone that would have reimburse it (the bank would only "not win" the interests).   
 More specifically, in our case, the *sensitivity* (probability of predicting "bad" when the client is indeed a "bad" one)  is more important than the *specificity* (probability of predicting "good for a client that is indeed "good").     
 Going further into that direction of having a particular focus at the clients that may not reimburse the money, we can look at the confusion matrices of each model rather than focusing only at the accuracy of each of them.  
@@ -1257,7 +1251,7 @@ print(confusionMatrix(models[i] %>% get)$table %>%
 }
 ```
 
-Based on these matrices, we will have to have a particular look at the elements on the bottom left hand corner as those are the *FALSE POSITIVE*, meaning that these instances are predicted as "good" but are in fact "bad" and will not reimburse the credit.  
+Based on these matrices, we will have to have a particular look at the elements on the bottom left hand corner as those are the *False Positive*, meaning that these instances are predicted as "good" but are in fact "bad" and will not reimburse the credit.  
 More specifically, we should look at the sensitivity of each model that will tell us, among the clients that are indeed bad, the probability that they are categorized as bad.  
 To do so, we created the two following functions to test the sensitivity of our models based on their confusion matrices.
 
@@ -1290,11 +1284,10 @@ for (i in 1:length(models)) {
 }
 ```
 
-
+<hr>
 After having presented some of the criterion that might be considered in order to select the final model that will be used for the predictions in the future, we underlined the fact that accuracy, false positive rate and sensitivity are particularily important.  
 
-Thus, considering these different aspects, the **boosting model** seems to be an excellent choice.  
-Indeed, the accuracy is almost equivalent to the best one and is not statistically significantly different from it. However, the sensitivity linked to the boosting model is much more satisfying and outperforms the other models. We can make the same conclusion about the false positive rate which is lower.  
+Thus, considering these different aspects, the **boosting model** seems to be an excellent choice. Indeed, the accuracy is almost equivalent to the best one and is not statistically significantly different from it. However, the sensitivity linked to the boosting model is much more satisfying and outperforms the other models. We can make the same conclusion about the false positive rate which is lower.  
 As it is a really important aspect of our analysis, these aspect will tend to prime over an accuracy. 
 
 Therefore, considering all these measures and what has been said before, we would recommend the final user to go for the boosting model.
@@ -1304,7 +1297,7 @@ Therefore, considering all these measures and what has been said before, we woul
 At this point, we could find a performant model that leads to a high accuracy, which has been the main criterion all over our analysis. The problem is that this model doesn't predict the "bad" customers well and we could even say that, within the "bad" customer, we have a random predictor as we can only reach a sensitivity of 0.5.  
 Therefore, considering the concepts that we presented in the last section, it could be interesting to reconduct this analysis using other criterion, like a weighted accuracy giving more weights to the "bad" customers.  
 Working in this way with a weighted accuracy, all the tuning during our process of selecting the best models would potentially lead to new parameters and to better predict the "bad" instances in which we are particularily interested in.  
-Another approach that could be used is to separate the inital dataset into two different sets with the same number of "good" and "bad" customers (300 of each) to change the *a-priori* of predicting the most represented class. Using this method, the different build models will not favorize the "good" outcome which might increase the predictive capabilities of the prediction of "bad" customers.  
+Another approach that could be used is to separate the inital dataset into two different sets with the same number of "good" and "bad" customers (300 of each) is to change the *a priori* of predicting the most represented class. Using this method, the different build models will not favorize the "good" outcome which might increase the predictive capabilities of the prediction of "bad" customers.  
 
 # References
 
