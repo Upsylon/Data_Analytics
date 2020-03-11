@@ -1,5 +1,5 @@
 ---
-title: "Project Data Anlytics"
+title: "Project Data Analytics"
 author: "Bron Luca, Grandadam Patrik"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 bibliography: bibliography.bib
